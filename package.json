@@ -1,0 +1,39 @@
+{
+  "name": "limo804",
+  "version": "1.0.0",
+  "description": "LIMO804 Sydney chauffeur website built with Next.js, Tailwind CSS and JavaScript",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "db:setup": "node scripts/setup-db.mjs && node scripts/setup-quotes.mjs && node scripts/setup-quote-emails.mjs && node scripts/setup-quote-offers.mjs && node scripts/setup-drivers.mjs",
+    "test": "node --test tests/*.test.js",
+    "db:seed": "node scripts/seed-fleet.mjs",
+    "db:migrate": "node scripts/setup-quotes.mjs && node scripts/setup-quote-emails.mjs && node scripts/setup-quote-offers.mjs && node scripts/setup-drivers.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/servicetoday/limo804.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/servicetoday/limo804/issues"
+  },
+  "homepage": "https://github.com/servicetoday/limo804#readme",
+  "dependencies": {
+    "lucide-react": "^1.77.0",
+    "mysql2": "^3.24.6",
+    "next": "^16.4.6",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.5",
+    "tailwindcss": "^4.3.5"
+  },
+  "private": true
+}
