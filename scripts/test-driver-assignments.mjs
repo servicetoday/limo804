@@ -1,0 +1,151 @@
+// Run: node --conditions=react-server scripts/test-driver-assignments.mjs
+// Uses isolated database fixtures; Mailtrap requests are mocked, never delivered.
+import assert from 'node:assert/strict';
+import { registerHooks } from 'node:module';
+import { randomUUID } from 'node:crypto';
+import nextEnv from '@next/env';
+nextEnv.loadEnvConfig(process.cwd());
+registerHooks({ resolve(specifier, context, nextResolve) {
+  try { return nextResolve(specifier, context); }
+  catch (error) {
+    if (error.code === 'ERR_MODULE_NOT_FOUND' && /^\.\.?\//.test(specifier) && !/\.[a-z]+$/i.test(specifier)) return nextResolve(specifier + '.js', context);
+    throw error;
+  }
+} });
+const { db } = await import('../lib/db.js');
+const { saveDriver } = await import('../lib/drivers.js');
+const { assignBookingDriver, saveBookingAssignmentAndNotify } = await import('../lib/booking-assignments.js');
+const { sendDriverBookingEmail } = await import('../lib/driver-booking-email.js');
+const { submitQuote, updateQuote, convertQuote, getQuote } = await import('../lib/quotes.js');
+const { listBookings } = await import('../lib/bookings.js');
+const token = randomUUID(), email = `driver-test-${token}@example.invalid`;
+let driverId, quoteId, bookingId;
+const realFetch = globalThis.fetch;
+const oldToken = process.env.MAILTRAP_API_TOKEN, oldSender = process.env.MAILTRAP_FROM_EMAIL;
+try {
+  globalThis.fetch = async () => { throw new Error('Unexpected provider request before email tests'); };
+  const [fleet] = await db.execute('SELECT id, passengers FROM fleet WHERE is_active = TRUE AND deleted_at IS NULL ORDER BY passengers');
+  assert.ok(fleet.length >= 2 && fleet[0].passengers < fleet.at(-1).passengers, 'Need published vehicles of different capacities');
+  const small = fleet[0], large = fleet.at(-1);
+  const driver = await saveDriver({ name: `TEST DRIVER ${token}`, phone: '0000000000', assignedFleetId: null, email: 'ignored@example.com' });
+  driverId = driver.id; assert.equal(driver.email, 'altaf@servicetoday.com.au');
+  await assert.rejects(saveDriver({ name: 'Test', phone: '0000000000', assignedFleetId: 4294967295 }), /published vehicle/);
+  const receipt = await submitQuote({ submissionKey: token, trip: { service: 'transfer', journey: 'one-way', legs: [{ pickup: 'Sydney Airport', dropoff: 'Sydney CBD', date: '2099-01-02', time: '10:00', passengers: small.passengers + 1, stops: [{ location: 'Mascot' }] }] }, customer: { firstName: 'Test', lastName: token, email, countryCode: '+61', mobile: '0000000000', someoneElse: false, reference: 'DUMMY-DRIVER-INTEGRATION', chauffeurNote: 'TEST ONLY - do not dispatch' } }, null);
+  const [quotes] = await db.execute('SELECT id FROM quotes WHERE reference = ?', [receipt.reference]); quoteId = quotes[0].id;
+  assert.equal((await getQuote(quoteId)).preferred_fleet_id, null);
+  await assert.rejects(updateQuote(quoteId, { status: 'submitted', preferredFleetId: small.id }), /passenger count/);
+  assert.equal((await updateQuote(quoteId, { status: 'submitted', preferredFleetId: large.id })).preferred_fleet_id, large.id);
+  assert.equal((await updateQuote(quoteId, { status: 'submitted', preferredFleetId: null })).preferred_fleet_id, null);
+  await updateQuote(quoteId, { status: 'submitted', preferredFleetId: large.id });
+  await updateQuote(quoteId, { status: 'quoted', quotedTotal: '100' });
+  await updateQuote(quoteId, { status: 'accepted' });
+  const booking = await convertQuote(quoteId); bookingId = booking.id;
+  const [convertedVehicle] = await db.execute('SELECT assigned_fleet_id FROM bookings WHERE id = ?', [bookingId]);
+  assert.equal(convertedVehicle[0].assigned_fleet_id, large.id);
+  await assignBookingDriver(bookingId, null, null);
+  const initiallyUnassigned = await saveBookingAssignmentAndNotify(bookingId, null);
+  assert.equal(initiallyUnassigned.unchanged, true); assert.equal(initiallyUnassigned.email, null); assert.equal(initiallyUnassigned.emailError, undefined);
+  await assignBookingDriver(bookingId, driverId, null);
+  const [withoutVehicle] = await db.execute('SELECT assigned_driver_id, assigned_fleet_id FROM bookings WHERE id = ?', [bookingId]);
+  assert.equal(withoutVehicle[0].assigned_driver_id, driverId); assert.equal(withoutVehicle[0].assigned_fleet_id, null);
+  await assignBookingDriver(bookingId, null, null);
+  const driverInput = { name: driver.name, phone: '0000000000', assignedFleetId: small.id };
+  await saveDriver(driverInput, driverId);
+  await assert.rejects(assignBookingDriver(bookingId, driverId, small.id), /passenger count/);
+  await assert.rejects(assignBookingDriver(bookingId, driverId, large.id), /attached to the selected vehicle/);
+  await saveDriver({ ...driverInput, assignedFleetId: large.id }, driverId);
+  await assignBookingDriver(bookingId, driverId, large.id);
+  const [assigned] = await db.execute('SELECT * FROM bookings WHERE id = ?', [bookingId]);
+  assert.equal(assigned[0].assigned_driver_id, driverId); assert.equal(assigned[0].assigned_fleet_id, large.id);
+  assert.equal((await assignBookingDriver(bookingId, driverId)).unchanged, true);
+  assert.equal((await listBookings()).find(row => row.id === bookingId).driver_name, driver.name);
+
+  process.env.MAILTRAP_API_TOKEN = 'mock-token'; process.env.MAILTRAP_FROM_EMAIL = 'mock-sender@example.invalid';
+  let calls = 0;
+  let releaseSend, startedSend;
+  const started = new Promise(resolve => { startedSend = resolve; });
+  globalThis.fetch = async (url, options) => {
+    assert.equal(url, 'https://send.api.mailtrap.io/api/send');
+    calls++;
+    const body = JSON.parse(options.body);
+    assert.deepEqual(body.to, [{ email: 'altaf@servicetoday.com.au' }]);
+    assert.ok(body.text.includes(booking.reference)); assert.ok(body.text.includes('Stop 1: Mascot')); assert.ok(body.subject.startsWith('[TEST]'));
+    assert.ok(body.text.includes('Booking amount: AUD 100.00')); assert.ok(body.html.includes('Booking amount: AUD 100.00'));
+    startedSend();
+    await new Promise(resolve => { releaseSend = resolve; });
+    return Response.json({ success: true, message_ids: ['mock-driver-message'] });
+  };
+  const sending = saveBookingAssignmentAndNotify(bookingId, driverId);
+  await started;
+  await assert.rejects(sendDriverBookingEmail(bookingId), /already be sending/);
+  await assert.rejects(sendDriverBookingEmail(bookingId, { resend: true }), /already be sending/);
+  await assert.rejects(assignBookingDriver(bookingId, null), /Mailtrap/);
+  releaseSend(); assert.equal((await sending).email.status, 'accepted');
+  assert.equal((await sendDriverBookingEmail(bookingId)).repeated, true); assert.equal(calls, 1);
+  assert.equal((await saveBookingAssignmentAndNotify(bookingId, driverId)).email.repeated, true); assert.equal(calls, 1);
+  globalThis.fetch = async () => { calls++; return Response.json({ success: true, message_ids: ['mock-manual-resend'] }); };
+  assert.equal((await sendDriverBookingEmail(bookingId, { resend: true })).repeated, false); assert.equal(calls, 2);
+  const [resent] = await db.execute("SELECT attempts, provider_message_id FROM quote_emails WHERE quote_id = ? AND status = 'accepted'", [quoteId]);
+  assert.equal(resent[0].attempts, 2); assert.equal(resent[0].provider_message_id, 'mock-manual-resend');
+  const beforeUnassign = calls;
+  globalThis.fetch = async (url, options) => {
+    calls++; const body = JSON.parse(options.body);
+    assert.deepEqual(body.to, [{ email: 'altaf@servicetoday.com.au' }]);
+    assert.ok(body.subject.includes('Unassigned')); assert.ok(body.text.includes(driver.name));
+    assert.ok(body.text.includes(booking.reference)); assert.ok(body.text.includes('do not attend'));
+    assert.ok(!body.text.includes('You have been assigned'));
+    return Response.json({ success: true, message_ids: ['mock-unassigned'] });
+  };
+  const removed = await saveBookingAssignmentAndNotify(bookingId, null);
+  assert.equal(removed.email.notificationType, 'unassigned'); assert.equal(removed.assignedDriverId, null); assert.equal(calls, beforeUnassign + 1);
+  assert.equal((await saveBookingAssignmentAndNotify(bookingId, null)).email, null); assert.equal(calls, beforeUnassign + 1);
+  assert.equal((await sendDriverBookingEmail(bookingId)).repeated, true); assert.equal(calls, beforeUnassign + 1);
+  assert.equal((await sendDriverBookingEmail(bookingId, { resend: true })).notificationType, 'unassigned'); assert.equal(calls, beforeUnassign + 2);
+  const removedRow = (await listBookings()).find(row => row.id === bookingId);
+  assert.equal(removedRow.unassigned_driver_name, driver.name); assert.equal(removedRow.driver_email_status, 'accepted');
+  globalThis.fetch = async () => { calls++; return Response.json({ success: false, message: 'Mock rejection' }, { status: 400 }); };
+  const failedAuto = await saveBookingAssignmentAndNotify(bookingId, driverId);
+  assert.match(failedAuto.emailError, /Mock rejection/); assert.equal(failedAuto.assignedDriverId, driverId);
+  const [savedAfterFailure] = await db.execute('SELECT assigned_driver_id, assigned_fleet_id FROM bookings WHERE id = ?', [bookingId]);
+  assert.equal(savedAfterFailure[0].assigned_driver_id, driverId); assert.equal(savedAfterFailure[0].assigned_fleet_id, large.id);
+  globalThis.fetch = async () => { calls++; return Response.json({ success: true, message_ids: ['mock-retry'] }); };
+  assert.equal((await sendDriverBookingEmail(bookingId)).repeated, false);
+  await assignBookingDriver(bookingId, null); await assignBookingDriver(bookingId, driverId);
+  globalThis.fetch = async () => { throw new Error('Mock network failure'); };
+  await assert.rejects(sendDriverBookingEmail(bookingId), /Mock network/);
+  await assert.rejects(sendDriverBookingEmail(bookingId), /already be sending/);
+  await assert.rejects(assignBookingDriver(bookingId, null), /Mailtrap/);
+  const [unknown] = await db.execute("SELECT COUNT(*) AS n FROM quote_emails WHERE quote_id = ? AND status = 'unknown'", [quoteId]); assert.equal(unknown[0].n, 1);
+  globalThis.fetch = async () => { calls++; return Response.json({ success: true, message_ids: ['mock-resend-after-unknown'] }); };
+  assert.equal((await sendDriverBookingEmail(bookingId, { resend: true })).status, 'accepted');
+  await assert.rejects(sendDriverBookingEmail(bookingId, { assignmentVersion: 0 }), /assignment changed/);
+  globalThis.fetch = async () => Response.json({ success: false, message: 'Mock removal rejection' }, { status: 400 });
+  const removalFailure = await saveBookingAssignmentAndNotify(bookingId, null);
+  assert.match(removalFailure.emailError, /Mock removal rejection/);
+  const [stillRemoved] = await db.execute('SELECT assigned_driver_id, assigned_fleet_id, unassigned_driver_name FROM bookings WHERE id = ?', [bookingId]);
+  assert.equal(stillRemoved[0].assigned_driver_id, null); assert.equal(stillRemoved[0].assigned_fleet_id, large.id); assert.equal(stillRemoved[0].unassigned_driver_name, driver.name);
+  globalThis.fetch = async (url, options) => { assert.ok(JSON.parse(options.body).subject.includes('Unassigned')); return Response.json({ success: true, message_ids: ['mock-removal-retry'] }); };
+  assert.equal((await sendDriverBookingEmail(bookingId, { resend: true })).notificationType, 'unassigned');
+  await saveDriver({ ...driverInput, assignedFleetId: null }, driverId);
+  globalThis.fetch = async (url, options) => {
+    const body = JSON.parse(options.body);
+    assert.ok(body.text.includes('Vehicle: Not selected')); assert.ok(body.text.includes('Booking amount: AUD 100.00'));
+    return Response.json({ success: true, message_ids: ['mock-driver-without-vehicle'] });
+  };
+  const anyDriver = await saveBookingAssignmentAndNotify(bookingId, driverId, null);
+  assert.equal(anyDriver.assignedFleetId, null); assert.equal(anyDriver.email.status, 'accepted');
+  await db.execute("UPDATE bookings SET status = 'cancelled' WHERE id = ?", [bookingId]);
+  await assert.rejects(assignBookingDriver(bookingId, driverId), /no longer/);
+  await assert.rejects(sendDriverBookingEmail(bookingId), /no longer/);
+  console.log('PASS: optional quote/booking vehicles, quote vehicle selection and clearing, conversion vehicle carryover, drivers without vehicles, specific-vehicle matching and capacity, automatic notifications, unassignment, resend and failure handling. No real emails sent.');
+} finally {
+  globalThis.fetch = realFetch;
+  if (oldToken === undefined) delete process.env.MAILTRAP_API_TOKEN; else process.env.MAILTRAP_API_TOKEN = oldToken;
+  if (oldSender === undefined) delete process.env.MAILTRAP_FROM_EMAIL; else process.env.MAILTRAP_FROM_EMAIL = oldSender;
+  // All fixtures are uniquely tagged; original application records are untouched.
+  if (bookingId) await db.execute('DELETE FROM bookings WHERE id = ?', [bookingId]);
+  if (quoteId) await db.execute('DELETE FROM quotes WHERE id = ?', [quoteId]);
+  await db.execute('DELETE FROM customers WHERE email = ? AND id NOT IN (SELECT customer_id FROM quotes UNION SELECT passenger_id FROM quotes)', [email]);
+  if (driverId) await db.execute('DELETE FROM drivers WHERE id = ?', [driverId]);
+  await db.end();
+}

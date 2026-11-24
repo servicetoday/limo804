@@ -5,6 +5,7 @@ export function isAirportPickup(location) {
 export function validateJourneys(legs, { hourly = false, returnDate = null, returnTime = '', now = new Date() } = {}) {
   const error = (leg, field, message) => ({ id: leg.id, field, message });
   for (const leg of legs) {
+    if (!hourly && leg.waitingMinutes !== undefined && (leg.waitingMinutes === '' || !Number.isInteger(Number(leg.waitingMinutes)) || Number(leg.waitingMinutes) < 0 || Number(leg.waitingMinutes) > 1440)) return error(leg, 'waitingMinutes', 'Enter waiting time between 0 and 1440 whole minutes.');
     if (!leg.pickup.trim()) return error(leg, 'pickup', 'Please enter a pick-up location.');
     if (!hourly && !leg.dropoff.trim()) return error(leg, 'dropoff', 'Please enter a drop-off location.');
     if (!hourly && leg.pickup.trim().toLowerCase() === leg.dropoff.trim().toLowerCase()) return error(leg, 'dropoff', 'Choose a different drop-off location.');

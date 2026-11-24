@@ -70,7 +70,7 @@ export default function FleetAdmin({ initialVehicles, initialError }) {
   const field = (name, label, options = {}) => <label>{label}<input id={name === 'name' ? 'fleet-name' : undefined} value={vehicle[name]} onChange={event => update(name, event.target.value)} {...options} /></label>;
 
   return <div className="admin-shell">
-    <header className="admin-header"><Logo /><div><Link href="/admin/quotes">Quote requests</Link><Link href="/fleet" target="_blank" rel="noopener noreferrer">View public fleet</Link><button type="button" onClick={logout}><LogOut size={16} />Sign out</button></div></header>
+    <header className="admin-header"><Logo /><div><Link href="/admin/bookings">Bookings</Link><Link href="/admin/drivers">Drivers</Link><Link href="/admin/quotes">Quote requests</Link><Link href="/fleet" target="_blank" rel="noopener noreferrer">View public fleet</Link><button type="button" onClick={logout}><LogOut size={16} />Sign out</button></div></header>
     <main className="admin-main"><div className="admin-title"><div><p className="eyebrow">Limo804 administration</p><h1>Fleet manager</h1><p>Add vehicles, update capacities and choose what appears on your website.</p></div><span>{vehicles.length} vehicle{vehicles.length === 1 ? '' : 's'}</span></div>
       <div aria-live="polite">{error && <p className="admin-error" role="alert">{error}</p>}{notice && <p className="admin-notice" role="status">{notice}</p>}</div>
       <div className="admin-columns">

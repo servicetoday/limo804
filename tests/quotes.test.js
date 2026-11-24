@@ -31,6 +31,48 @@ test('stops retain their order and reject blank or duplicate adjacent locations'
   assert.deepEqual(validateQuote(raw, now).legs[0].stops, ['Mascot', 'Surry Hills']);
   raw.trip.legs[0].stops[1].location = 'mascot'; assert.throws(() => validateQuote(raw, now), /Adjacent/);
 });
+
+test('return journeys preserve outbound stops and reverse them for the return', () => {
+  const raw = payload();
+  Object.assign(raw.trip, { journey: 'return', returnDate: '2030-01-04', returnTime: '15:00' });
+  raw.trip.legs[0].stops = [{ location: 'Mascot' }, { location: 'Surry Hills' }];
+  const result = validateQuote(raw, now);
+  assert.deepEqual(result.legs[0].stops, ['Mascot', 'Surry Hills']);
+  assert.deepEqual(result.legs[1].stops, ['Surry Hills', 'Mascot']);
+});
+
+test('multi-trip journeys keep independent stops and enforce the limit per journey', () => {
+  const raw = payload();
+  raw.trip.journey = 'multi-trip';
+  raw.trip.legs[0].stops = [{ location: 'Mascot' }];
+  raw.trip.legs.push({ ...raw.trip.legs[0], pickup: 'Parramatta', dropoff: 'Manly', stops: [{ location: 'Chatswood' }, { location: 'Mosman' }] });
+  const result = validateQuote(raw, now);
+  assert.deepEqual(result.legs.map(leg => leg.stops), [['Mascot'], ['Chatswood', 'Mosman']]);
+  raw.trip.legs[1].stops.push({ location: 'Neutral Bay' }, { location: 'North Sydney' });
+  assert.throws(() => validateQuote(raw, now), /three stops/);
+});
+
+test('hourly journeys still reject intermediate stops', () => {
+  const raw = payload();
+  Object.assign(raw.trip, { service: 'hourly', hours: 3 });
+  raw.trip.legs[0].stops = [{ location: 'Mascot' }];
+  assert.throws(() => validateQuote(raw, now), /per transfer journey/);
+});
+
+test('waiting plans are validated and preserved in quote notes without trusting client prices', () => {
+  const raw = payload();
+  Object.assign(raw.trip, { journey: 'return', returnDate: '2030-01-04', returnTime: '15:00', returnWaitingMinutes: '45', fareEstimate: { totalCents: 1 } });
+  raw.trip.legs[0].waitingMinutes = '35';
+  raw.customer.chauffeurNote = 'Please call on arrival.';
+  const result = validateQuote(raw, now);
+  assert.deepEqual(result.legs.map(leg => leg.waitingMinutes), [35, 45]);
+  assert.match(result.customer.chauffeurNote, /Please call on arrival/);
+  assert.match(result.customer.chauffeurNote, /Trip 1: 35 minutes planned waiting/);
+  assert.match(result.customer.chauffeurNote, /Return journey: 45 minutes planned waiting/);
+  assert.equal(result.fareEstimate, undefined);
+  raw.trip.returnWaitingMinutes = -1;
+  assert.throws(() => validateQuote(raw, now), /Return waiting minutes/);
+});
 test('flight-based timing is accepted only for valid airport arrivals', () => {
   const raw = payload(); Object.assign(raw.trip.legs[0], { date: '', time: '', flightScheduled: true, flightNumber: 'EK412' });
   assert.equal(validateQuote(raw, now).legs[0].utc, null);

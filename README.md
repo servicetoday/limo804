@@ -11,6 +11,12 @@ npm run dev
 
 Open http://localhost:3000.
 
+Pick-up and drop-off fields use Google Places Autocomplete, with Australian results biased toward Sydney. The form uses Places API (New) when available and falls back to the existing autocomplete service for older Google Cloud projects with legacy Places access. Set `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` in `.env.local` (configured locally), and enable Maps JavaScript API and Places API (New), with billing, in the Google Cloud project. Restrict the browser key to your website domains and localhost for development. Add the same environment variable to your hosting settings before building; Next.js embeds public variables at build time. Restart development or rebuild production after changing it. Manual address entry remains available when suggestions cannot load.
+
+Route previews show driving directions from pick-up through all stops to drop-off, plus a separate reverse route for return bookings and a map for each multi-trip leg. The map updates when addresses or stop order change and shows estimated distance and driving time (excluding time at stops). Enable Maps JavaScript API and Routes API for the browser key. `NEXT_PUBLIC_GOOGLE_MAP_ID` optionally supplies your Google Cloud map ID; development defaults to Google's demo map ID.
+
+Transfer estimates use AUD $4/km plus $0.75 per driving minute, plus 10% GST, with an $80 GST-inclusive driving minimum per journey. The first 30 minutes of waiting per journey are free; extra waiting is added after the minimum at $0.75/min plus GST. Return and multi-trip estimates sum each journey. Prices use map distances and durations, with each journey total rounded up to the next AUD $5 after GST, waiting and tolls. Exact $5 multiples stay unchanged. The breakdown includes the taxable rounding adjustment, and combined totals sum the rounded journey prices. Prices appear in the route and final review. Google Routes toll estimates in AUD are added after the minimum fare, through all stops and separately for each return/multi-trip journey. Toll amounts are treated as GST-inclusive and included once; no additional GST is charged on top of them. If Google reports a toll but cannot price it, the estimate is visibly marked ?+ tolls? until the team confirms those charges. No vehicle toll pass is assumed; Google uses its default toll pricing. Toll computations use Google?s higher-priced toll calculation SKU. Planned waiting is saved in chauffeur notes; displayed estimates do not replace the team-confirmed quote.
+
 ## Production
 
 ```sh
@@ -19,6 +25,8 @@ npm start
 ```
 
 ## Features
+
+- Passenger-count dropdowns (1?7) on each quote journey and editable per-trip counts in Admin Bookings, with vehicle-capacity checks and audit history
 
 - Navy and gold design inspired by the supplied reference
 - Responsive navigation and layouts
@@ -195,4 +203,16 @@ This verifies signed views, expiry, price changes, explicit acceptance, tamper a
 
 ## Drivers
 
-Migration `004_drivers` adds `drivers` with `id`, required `name`, `email`, `phone`, and automatic `created_at`/`updated_at` timestamps. Migration `005_driver_address` adds an optional `address` field (up to 500 characters), preserving existing driver records. Names and email addresses are indexed. Run `npm run db:migrate` to create or update the table on another installation. This prepares driver records; an admin editor and booking assignment relationship are not implemented yet.
+Migration `004_drivers` adds `drivers` with `id`, required `name`, `email`, `phone`, and automatic `created_at`/`updated_at` timestamps. Migration `005_driver_address` adds an optional `address` field (up to 500 characters), preserving existing driver records. Names and email addresses are indexed. Run `npm run db:migrate` to create or update the table on another installation. Driver management is available at `/admin/drivers`; booking assignment and notification controls are at `/admin/bookings` after migration `006_driver_booking_assignments`.
+
+## Driver vehicles and booking assignments
+
+Run `npm run db:migrate` to apply migration `006_driver_booking_assignments`. It adds a vehicle link to each driver and a driver link plus assignment version to each booking. Existing drivers use the temporary shared email address `altaf@servicetoday.com.au`; new and edited drivers also use this address.
+
+At `/admin/drivers`, add or edit drivers and attach a published fleet vehicle. At `/admin/bookings`, select a driver and click **Save assignment**. Vehicle selection is optional in the public quote form, admin quote editor and booking assignment controls. Select **Any vehicle** to allow every driver, including drivers without an attached vehicle. Selecting a specific booking vehicle limits the choices to drivers attached to that vehicle and checks passenger capacity across every journey. Saving automatically emails the selected driver. Clearing an existing driver assignment automatically emails the previous driver that they have been unassigned and must not attend. Saving an already-unassigned booking sends no email. Migration `007_driver_unassignment_notifications` stores the previous driver?s name so failed removal notifications can be retried. Email failure leaves the assignment saved and displays a separate error. Driver selection does not automatically select a vehicle. Quote vehicle preferences carry into new bookings and can be changed or cleared in booking assignment controls. A driver's default vehicle can be managed separately at `/admin/drivers`. Assignment does not change booking confirmation status.
+
+Driver emails include the booking total and currency, all journeys, stops, passenger contact information, pick-up sign and chauffeur notes through the configured Mailtrap sender. Click **Email driver** to send another copy, including after a previous accepted or uncertain delivery. After clearing a driver, it resends the unassignment notice to the previous driver. All notifications use the shared driver address. Each assignment has a separate delivery log in `quote_emails`, with an attempt count and the latest result. Automatic sends for an unchanged, already-notified assignment are deduplicated. Concurrent sends are blocked; uncertain delivery blocks reassignment until the operator checks Mailtrap or explicitly resends. Cancelled and completed bookings cannot be reassigned or emailed. Automatic scheduling and availability checks are not implemented.
+
+Run `node --conditions=react-server scripts/test-driver-assignments.mjs` to verify the workflow against the configured database with isolated, cleaned-up fixtures and mocked Mailtrap requests. This check sends no real emails and requires two published vehicles of different passenger capacities.
+
+Driver profiles also support an optional vehicle registration (number plate), stored in uppercase. Run `npm run db:migrate` to apply migration `008_driver_vehicle_registration`. Add or edit the plate at `/admin/drivers`; it is also shown in the driver list. Leaving out the registration field in an API update preserves an existing plate; sending an empty value clears it.

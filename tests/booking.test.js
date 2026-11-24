@@ -50,3 +50,9 @@ test('validates added stops and their relationship to surrounding locations', ()
   assert.equal(validateJourneys([{ ...first, stops: [{ id: 'a', location: 'Sydney CBD' }] }], { now }).field, 'dropoff');
   assert.equal(validateJourneys([{ ...first, stops: [{ id: 'a', location: 'Surry Hills' }] }], { now }), null);
 });
+
+test('invalid waiting on a collapsed trip identifies the field that needs expanding', () => {
+  const error = validateJourneys([first, { ...second, collapsed: true, waitingMinutes: -1 }], { now });
+  assert.equal(error.id, second.id);
+  assert.equal(error.field, 'waitingMinutes');
+});

@@ -41,9 +41,21 @@ try {
   const [quote] = await c.execute('SELECT status FROM quotes WHERE id = ?', [id]); assert.equal(quote[0].status, 'converted');
   const confirmedHtml = await (await req(updated.url)).text(); assert.ok(confirmedHtml.includes(a.booking.reference));
   const [history] = await c.execute("SELECT * FROM quote_status_history WHERE quote_id = ? AND actor = 'customer' AND to_status IN ('accepted','converted')", [id]); assert.equal(history.length, 2);
+  const [fleet] = await c.execute('SELECT id FROM fleet WHERE is_active = TRUE AND deleted_at IS NULL AND passengers >= 2 ORDER BY id LIMIT 1');
+  assert.ok(fleet[0], 'Need a published vehicle for the optional vehicle scenario.');
+  const vehicleQuote = await create();
+  assert.equal((await req(`/api/admin/quotes/${vehicleQuote}`, json('PATCH', { status: 'submitted', preferredFleetId: fleet[0].id }), true)).status, 200);
+  const vehicleOffer = await prepare(vehicleQuote, '200.00');
+  assert.equal((await req(`/api/admin/quotes/${vehicleQuote}`, json('PATCH', { status: 'quoted', preferredFleetId: null }), true)).status, 200);
+  assert.equal((await accept(tokenOf(vehicleOffer))).status, 409, 'Clearing the vehicle must invalidate the previous offer.');
+  assert.equal((await req(`/api/admin/quotes/${vehicleQuote}`, json('PATCH', { status: 'quoted', preferredFleetId: fleet[0].id }), true)).status, 200);
+  const selectedOffer = await prepare(vehicleQuote, '200.00');
+  assert.equal((await accept(tokenOf(selectedOffer))).status, 201);
+  const [selectedBookings] = await c.execute('SELECT assigned_fleet_id FROM bookings WHERE quote_id = ?', [vehicleQuote]);
+  assert.equal(selectedBookings[0].assigned_fleet_id, fleet[0].id, 'Customer confirmation must carry the selected vehicle into the booking.');
   const expiredId = await create(); const expired = await prepare(expiredId, '200.00'); await c.execute('UPDATE quote_offers SET expires_at = DATE_SUB(UTC_TIMESTAMP(), INTERVAL 1 MINUTE) WHERE id = ?', [expired.id]); assert.equal((await accept(tokenOf(expired))).status, 410); assert.ok((await (await req(expired.url)).text()).includes('quote has expired'));
   const oldId = await create(); const oldOffer = await prepare(oldId, '100.00'); await c.execute('UPDATE quote_journeys SET pickup_at_utc = DATE_SUB(UTC_TIMESTAMP(), INTERVAL 1 DAY) WHERE quote_id = ?', [oldId]); assert.equal((await accept(tokenOf(oldOffer))).status, 410);
-  console.log('PASS: admin priced offer, signed private preview, no GET acceptance, explicit consent, expiry, price-change invalidation, forged token and CSRF rejection, server-authoritative price, concurrent customer confirmation, one confirmed booking, audit history, confirmation view and past-pickup rejection. No real email was sent.');
+  console.log('PASS: optional quote vehicles, vehicle changes invalidate old offers, selected vehicles carry into customer-confirmed bookings, signed offers, pricing, consent, expiry, CSRF, concurrency and confirmation. No real email was sent.');
 } finally {
   for (const id of quoteIds) { await c.execute('DELETE FROM bookings WHERE quote_id = ?', [id]); await c.execute('DELETE FROM quotes WHERE id = ?', [id]); }
   await c.execute('DELETE FROM customers WHERE email = ? AND id NOT IN (SELECT customer_id FROM quotes UNION SELECT passenger_id FROM quotes)', [email]);
