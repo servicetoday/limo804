@@ -26,7 +26,7 @@ export default async function QuotePage({ searchParams }) {
         <Logo />
         <Link className="quote-home-link" href="/">Back to home</Link>
         <Link className="quote-manage-link" href="/manage-booking">Manage booking</Link>
-        <a className="header-phone" href="tel:13005466804"><Phone size={23} fill="currentColor" /><span>1300 LIMO 804</span></a>
+        <a className="header-phone" href="tel:0416934865"><Phone size={23} fill="currentColor" /><span>0416 934 865</span></a>
       </div>
     </header>
     <main id="main" className="quote-main booking-page">

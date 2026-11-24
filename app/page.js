@@ -50,7 +50,7 @@ export default function Home() {
           <button onClick={() => { setMenuOpen(false); setActiveService(services[2]); }}>Weddings</button>
           <a href="#contact" onClick={() => setMenuOpen(false)}>Contact</a>
         </nav>
-        <a className="header-phone" href="tel:13005466804"><Phone size={23} fill="currentColor" /><span>1300 LIMO 804</span></a>
+        <a className="header-phone" href="tel:0416934865"><Phone size={23} fill="currentColor" /><span>0416 934 865</span></a>
         <Link className="gold-button header-book" href="/quote">Book now</Link>
         <button className="menu-toggle" aria-label={menuOpen ? 'Close navigation' : 'Open navigation'} aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X /> : <Menu />}</button>
       </div>
@@ -83,7 +83,7 @@ export default function Home() {
         <div className="fleet-image"><img src="/images/hero-mercedes.jpg" alt="Mercedes-Benz exterior with refined metallic detailing" loading="lazy" /><span className="image-caption">Exceptional journeys begin here.</span></div>
         <div className="fleet-copy"><p className="eyebrow">The journey is yours</p><h2>A little luxury.<br />A world of difference.</h2><p>From an early airport departure to an evening worth celebrating, make every journey feel like part of the occasion.</p><div className="fleet-options"><span><CarFront size={20} /> Premium sedans</span><span><Users size={20} /> Group travel</span><span><Luggage size={20} /> Airport journeys</span></div><p className="fleet-note">Ask about available vehicles and luggage capacity when booking.</p><Link className="gold-button" href="/quote" onClick={closeDialog}>Plan your journey <ArrowRight size={19} /></Link></div>
       </section>
-      <section id="contact" className="contact-section"><div><p className="eyebrow">Every detail. Taken care of.</p><h2>Your next journey starts here.</h2><p>Airport transfer, business meeting or special occasion.<br />Let’s make your arrival exceptional.</p></div><a href="tel:13005466804" className="gold-button"><Phone size={20} /> 1300 LIMO 804</a></section>
+      <section id="contact" className="contact-section"><div><p className="eyebrow">Every detail. Taken care of.</p><h2>Your next journey starts here.</h2><p>Airport transfer, business meeting or special occasion.<br />Let’s make your arrival exceptional.</p></div><a href="tel:0416934865" className="gold-button"><Phone size={20} /> 0416 934 865</a></section>
     </main>
     <footer className="footer"><Logo /><p>Chauffeur & limousine services · Sydney, Australia</p><span>© {new Date().getFullYear()} LIMO804. All rights reserved.</span></footer>
 

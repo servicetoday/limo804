@@ -16,7 +16,7 @@ export default function ManageBookingPage() {
       <section className="quote-panel manage-panel" aria-labelledby="manage-heading">
         <CalendarCheck className="manage-icon" size={34} strokeWidth={1.5} aria-hidden="true" />
         <div className="quote-panel-heading"><h2 id="manage-heading">Help with an existing booking</h2><p>Contact our team to check your booking details or discuss a change or cancellation. Have your booking reference and the name used for your booking ready when you call.</p></div>
-        <a className="gold-button" href="tel:13005466804"><Phone size={19} />Call 1300 LIMO 804</a>
+        <a className="gold-button" href="tel:0416934865"><Phone size={19} />Call 0416 934 865</a>
         <p className="quote-help">Booking changes are handled by our team over the phone.</p>
       </section>
     </main>
