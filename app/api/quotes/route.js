@@ -2,7 +2,7 @@ import { validOrigin } from '../../../lib/admin-auth';
 import { prepareQuoteFile, submitQuote } from '../../../lib/quotes';
 import { QuoteError } from '../../../lib/quote-validation';
 import { quoteErrorResponse } from '../../../lib/quote-http';
-import { sendNewQuoteEmail } from '../../../lib/quote-email';
+import { sendNewQuoteEmail, sendAdminNewQuoteEmail } from '../../../lib/quote-email';
 
 export const runtime = 'nodejs';
 export async function POST(request) {
@@ -24,10 +24,12 @@ export async function POST(request) {
     } else throw new QuoteError('Send quote details as JSON or form data.', 415);
     const saved = await submitQuote(payload, file);
     let emailStatus = 'not_sent';
+    let adminEmailStatus = 'not_sent';
     if (!saved.repeated) {
-      try { const email = await sendNewQuoteEmail(saved.reference); if (email) emailStatus = email.status; }
-      catch { emailStatus = 'failed'; }
+      const [customer, admin] = await Promise.allSettled([sendNewQuoteEmail(saved.reference), sendAdminNewQuoteEmail(saved.reference)]);
+      emailStatus = customer.status === 'fulfilled' ? customer.value?.status || 'not_sent' : 'failed';
+      adminEmailStatus = admin.status === 'fulfilled' ? admin.value?.status || 'not_sent' : 'failed';
     }
-    return Response.json({ ...saved, emailStatus }, { status: saved.repeated ? 200 : 201, headers: { 'Cache-Control': 'no-store' } });
+    return Response.json({ ...saved, emailStatus, adminEmailStatus }, { status: saved.repeated ? 200 : 201, headers: { 'Cache-Control': 'no-store' } });
   } catch (error) { return quoteErrorResponse(error); }
 }

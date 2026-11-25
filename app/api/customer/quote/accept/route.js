@@ -1,7 +1,7 @@
 import { validOrigin } from '../../../../../lib/admin-auth';
 import { acceptCustomerOffer } from '../../../../../lib/quote-offers';
 import { quoteErrorResponse } from '../../../../../lib/quote-http';
-import { sendQuoteEmail } from '../../../../../lib/quote-email';
+import { sendQuoteEmail, sendAdminNotification } from '../../../../../lib/quote-email';
 export async function POST(request) {
   if (!validOrigin(request)) return Response.json({ error: 'Invalid request origin.' }, { status: 403 });
   try {
@@ -11,9 +11,13 @@ export async function POST(request) {
     if (!data || data.accepted !== true) return Response.json({ error: 'Please accept the quote before confirming your booking.' }, { status: 400 });
     const result = await acceptCustomerOffer(data.token);
     let emailStatus = 'not_sent';
+    let adminEmailStatus = 'not_sent';
     if (!result.repeated && !/\.(invalid|test|example)$/i.test(result.recipient)) {
       try { emailStatus = (await sendQuoteEmail(result.quoteId, result.recipient, 'booking_update')).status; } catch { emailStatus = 'failed'; }
     }
-    return Response.json({ booking: result.booking, repeated: result.repeated, emailStatus }, { status: result.repeated ? 200 : 201, headers: { 'Cache-Control': 'no-store' } });
+    if (!result.repeated) {
+      try { adminEmailStatus = (await sendAdminNotification(result.quoteId, 'admin_booking'))?.status || 'not_sent'; } catch { adminEmailStatus = 'failed'; }
+    }
+    return Response.json({ booking: result.booking, repeated: result.repeated, emailStatus, adminEmailStatus }, { status: result.repeated ? 200 : 201, headers: { 'Cache-Control': 'no-store' } });
   } catch (error) { return quoteErrorResponse(error); }
 }

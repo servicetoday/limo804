@@ -3,13 +3,21 @@ import assert from 'node:assert/strict';
 import { validateDriver, optionalId, driverEmailType } from '../lib/driver-validation.js';
 import { driverBookingEmailContent, driverUnassignedEmailContent } from '../lib/driver-booking-email-template.js';
 
-test('driver validation fixes the temporary recipient and validates vehicle IDs', () => {
-  const driver = validateDriver({ name: ' Driver ', phone: '0400 000 000', address: ' Sydney ', assignedFleetId: '3', email: 'other@example.com' });
-  assert.equal(driver.email, 'altaf@servicetoday.com.au');
+test('driver validation preserves personal email and validates vehicle IDs', () => {
+  const driver = validateDriver({ name: ' Driver ', phone: '0400 000 000', address: ' Sydney ', assignedFleetId: '3', email: ' Other@Example.com ' });
+  assert.equal(driver.email, 'other@example.com');
   assert.equal(driver.name, 'Driver'); assert.equal(driver.assignedFleetId, 3);
   assert.equal(optionalId(null), null); assert.equal(optionalId(''), null);
   for (const id of [undefined, true, [], {}, -1, 0, '1.5', 4294967296]) assert.throws(() => optionalId(id));
   for (const change of [{ name: '' }, { phone: 'abc' }, { address: 'x'.repeat(501) }, { assignedFleetId: undefined }]) assert.throws(() => validateDriver({ name: 'Driver', phone: '0400000000', assignedFleetId: null, ...change }));
+});
+
+test('driver profile email is optional and rejects malformed addresses', () => {
+  const base = { name: 'Driver', phone: '0400000000', assignedFleetId: null };
+  assert.equal(validateDriver(base).email, '');
+  for (const email of ['not-an-email', 'driver@', '@example.com', 'driver @example.com', 'driver@example.com\nBcc:other@example.com', 'a'.repeat(255), null, true]) {
+    assert.throws(() => validateDriver({ ...base, email }));
+  }
 });
 test('notification keys distinguish reassignment to the same driver', () => {
   assert.notEqual(driverEmailType({ id: 1, driver_assignment_version: 1 }), driverEmailType({ id: 1, driver_assignment_version: 3 }));

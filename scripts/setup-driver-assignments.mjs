@@ -19,7 +19,7 @@ try {
     if (!rows.length) await c.query(`ALTER TABLE ${c.escapeId(table)} ADD CONSTRAINT ${c.escapeId(name)} FOREIGN KEY (${c.escapeId(column)}) REFERENCES ${c.escapeId(parent)} (id) ON DELETE SET NULL`);
   }
   // Temporary shared driver address requested by the operator.
-  await c.execute('UPDATE drivers SET email = ?', ['altaf@servicetoday.com.au']);
+  await c.execute('UPDATE drivers SET email = ? WHERE email = ?', ['admin@limo804.com.au', 'altaf@servicetoday.com.au']);
   await c.execute('INSERT IGNORE INTO schema_migrations (version, applied_at) VALUES (?, UTC_TIMESTAMP())', ['006_driver_booking_assignments']);
   console.log('Driver vehicles and booking assignments are ready. Existing records preserved.');
 } finally { await c.end(); }

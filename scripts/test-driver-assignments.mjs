@@ -27,8 +27,8 @@ try {
   const [fleet] = await db.execute('SELECT id, passengers FROM fleet WHERE is_active = TRUE AND deleted_at IS NULL ORDER BY passengers');
   assert.ok(fleet.length >= 2 && fleet[0].passengers < fleet.at(-1).passengers, 'Need published vehicles of different capacities');
   const small = fleet[0], large = fleet.at(-1);
-  const driver = await saveDriver({ name: `TEST DRIVER ${token}`, phone: '0000000000', assignedFleetId: null, email: 'ignored@example.com' });
-  driverId = driver.id; assert.equal(driver.email, 'altaf@servicetoday.com.au');
+  const driver = await saveDriver({ name: `TEST DRIVER ${token}`, phone: '0000000000', assignedFleetId: null, email: 'driver@example.com' });
+  driverId = driver.id; assert.equal(driver.email, 'driver@example.com');
   await assert.rejects(saveDriver({ name: 'Test', phone: '0000000000', assignedFleetId: 4294967295 }), /published vehicle/);
   const receipt = await submitQuote({ submissionKey: token, trip: { service: 'transfer', journey: 'one-way', legs: [{ pickup: 'Sydney Airport', dropoff: 'Sydney CBD', date: '2099-01-02', time: '10:00', passengers: small.passengers + 1, stops: [{ location: 'Mascot' }] }] }, customer: { firstName: 'Test', lastName: token, email, countryCode: '+61', mobile: '0000000000', someoneElse: false, reference: 'DUMMY-DRIVER-INTEGRATION', chauffeurNote: 'TEST ONLY - do not dispatch' } }, null);
   const [quotes] = await db.execute('SELECT id FROM quotes WHERE reference = ?', [receipt.reference]); quoteId = quotes[0].id;
@@ -68,7 +68,7 @@ try {
     assert.equal(url, 'https://send.api.mailtrap.io/api/send');
     calls++;
     const body = JSON.parse(options.body);
-    assert.deepEqual(body.to, [{ email: 'altaf@servicetoday.com.au' }]);
+    assert.deepEqual(body.to, [{ email: 'admin@limo804.com.au' }]);
     assert.ok(body.text.includes(booking.reference)); assert.ok(body.text.includes('Stop 1: Mascot')); assert.ok(body.subject.startsWith('[TEST]'));
     assert.ok(body.text.includes('Booking amount: AUD 100.00')); assert.ok(body.html.includes('Booking amount: AUD 100.00'));
     startedSend();
@@ -90,7 +90,7 @@ try {
   const beforeUnassign = calls;
   globalThis.fetch = async (url, options) => {
     calls++; const body = JSON.parse(options.body);
-    assert.deepEqual(body.to, [{ email: 'altaf@servicetoday.com.au' }]);
+    assert.deepEqual(body.to, [{ email: 'admin@limo804.com.au' }]);
     assert.ok(body.subject.includes('Unassigned')); assert.ok(body.text.includes(driver.name));
     assert.ok(body.text.includes(booking.reference)); assert.ok(body.text.includes('do not attend'));
     assert.ok(!body.text.includes('You have been assigned'));
