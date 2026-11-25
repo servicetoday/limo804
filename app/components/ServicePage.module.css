@@ -1,0 +1,45 @@
+.header nav{display:flex;align-items:center;gap:25px;margin-left:auto;font-size:20px}
+.header nav a:hover,.header nav a[aria-current=page]{color:var(--gold)}
+.photo{background-image:url('/images/sydney.jpg');background-position:center 50%}
+.shade{background:linear-gradient(90deg,#091420ef,#091420a6 55%,#09142040)}
+.main h2{font:500 48px/1.12 var(--font-cormorant,Georgia),Georgia,serif;margin:12px 0 22px}
+.main h3{font:500 29px/1.2 var(--font-cormorant,Georgia),Georgia,serif;margin:14px 0 12px}
+.intro{display:grid;grid-template-columns:1fr 1fr;gap:70px;padding-top:65px;padding-bottom:65px}
+.intro p:not(:global(.eyebrow)),.lead,.cards p,.planning p,.faq details p{font-size:21px;line-height:1.6;color:#657180;margin:0 0 18px}
+.intro>div:last-child{padding-top:8px}
+.comparison{padding:55px 0;background:#f4f5f6;border-top:1px solid #e5e7e9;border-bottom:1px solid #e5e7e9;scroll-margin-top:20px}
+.lead{max-width:850px}
+.tableScroll{overflow-x:auto;border:1px solid #dfe3e6;border-radius:12px;background:#fff;margin-top:30px}
+.tableScroll:focus-visible{outline:3px solid #ac8741;outline-offset:4px}
+.tableScroll table{width:100%;min-width:650px;border-collapse:collapse;text-align:left;font:14px/1.7 var(--font-inter,Arial),sans-serif}
+.tableScroll caption{text-align:left;padding:18px 23px;color:#667180;font-size:12px}
+.tableScroll th,.tableScroll td{padding:20px 23px;vertical-align:top;border-top:1px solid #e5e8eb}
+.tableScroll thead{background:#102134;color:#fff}
+.tableScroll thead th{font-weight:500;border-top:0}
+.tableScroll tbody th{width:19%;font-weight:600;color:#23364b}
+.tableScroll td{width:40.5%;color:#637080}
+.tableScroll tbody td:last-child{background:#fcf9f2;color:#2d4258}
+.note{font:12px/1.7 var(--font-inter,Arial),sans-serif;color:#6d7987;margin:18px 0 0}
+.occasions{padding-top:62px;padding-bottom:62px}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;margin-top:30px}
+.cards article{padding:30px;border:1px solid #e2e5e8;border-radius:12px;background:#fff}
+.cards article>svg{color:#a27b35}
+.cards p{margin-bottom:0}
+.cards a{display:inline-flex;gap:8px;align-items:center;font-size:18px;color:#95702d;margin-top:18px}
+.planning{background:#0d1c2d;color:#fff}
+.planningInner{display:grid;grid-template-columns:1fr 1fr;gap:75px;padding-top:60px;padding-bottom:60px}
+.planning p{color:#bec7d2}
+.planning .gold-button{margin-top:8px}
+.steps{list-style:none;padding:0;margin:0;display:grid;gap:28px}
+.steps li{display:flex;gap:20px}
+.steps li>span{font:500 25px/1.4 var(--font-cormorant,Georgia),serif;color:#d7af60;padding-top:2px}
+.steps h3{margin:0 0 10px}
+.steps p{margin-bottom:0}
+.faq{display:grid;grid-template-columns:.8fr 1.2fr;gap:70px;padding-top:62px;padding-bottom:62px}
+.faq details{border-bottom:1px solid #dfe3e6;padding:19px 0}
+.faq details:first-child{border-top:1px solid #dfe3e6}
+.faq summary{cursor:pointer;font-size:24px;line-height:1.4;color:#23364b}
+.faq details p{margin:15px 0 0}
+.faq a{text-decoration:underline;text-underline-offset:3px;color:#95702d}
+@media(max-width:1100px){.header{flex-wrap:wrap}.header nav{order:4;flex-basis:100%;justify-content:center;margin:0;padding:6px 0}.header>a:last-child{margin-left:auto}.intro,.planningInner,.faq{gap:35px}}
+@media(max-width:760px){.header nav{font-size:16px;gap:18px;flex-wrap:wrap}.header>a:last-child{font-size:12px;padding:12px 16px}.main h2{font-size:38px}.main h3{font-size:27px}.intro,.planningInner,.faq{grid-template-columns:1fr;gap:25px;padding-top:38px;padding-bottom:38px}.intro>div:last-child{padding:0}.intro p:not(:global(.eyebrow)),.lead,.cards p,.planning p,.faq details p{font-size:19px}.comparison{padding:36px 0}.tableScroll th,.tableScroll td{padding:16px}.tableScroll table{font-size:13px}.occasions{padding-top:38px;padding-bottom:38px}.cards{grid-template-columns:1fr;gap:16px;margin-top:24px}.cards article{padding:24px}.faq summary{font-size:22px}.hero :global(.hero-actions){align-items:flex-start}}

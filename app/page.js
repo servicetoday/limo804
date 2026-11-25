@@ -7,13 +7,20 @@ import ManageBookingLink from './components/ManageBookingLink';
 import { ArrowRight, Diamond, Menu, Phone, Plane, ShieldCheck, Users, UserRound, X, Luggage, CarFront } from 'lucide-react';
 
 const services = [
-  { id: 'airport', title: 'Airport Transfers', image: '/images/airport.jpg', alt: 'Aircraft in flight at sunset', description: 'Relax and enjoy a smooth transfer\nto or from Sydney Airport.', detail: 'Start or finish your journey in comfort. Arrange a private transfer between Sydney Airport and your home, hotel or office. Share your flight number when requesting your booking so your chauffeur can plan your arrival.' },
+  { id: 'airport', title: 'Airport Transfers', image: '/images/airport.jpg', alt: 'Aircraft in flight at sunset', description: 'Relax and enjoy a smooth transfer\nto or from either Sydney airport.', detail: 'Start or finish your journey in comfort. Arrange a private transfer between Sydney Airport or Western Sydney International Airport and your home, hotel or office. Share your flight number when requesting your booking so your chauffeur can plan your arrival.' },
   { id: 'corporate', title: 'Corporate Chauffeur', image: '/images/sydney.jpg', alt: 'Sydney Harbour and Opera House', description: 'Travel in comfort and arrive on time\nfor your business commitments.', detail: 'Make room for what matters. From a single meeting to a full day of appointments, discuss a chauffeur itinerary tailored to your business travel across Sydney.' },
   { id: 'weddings', title: 'Special Occasions', image: '/images/wedding.jpg', alt: 'Elegant wedding flowers and celebration setting', description: 'Make your event unforgettable\nwith luxury transport.', detail: 'A beautiful arrival for a memorable day. Plan transport for weddings, anniversaries, celebrations or a special evening out. Tell us about your occasion, your party size and the little details that matter.' },
 ];
 const benefits = [{ icon: Plane, text: '24/7 Airport Transfers' }, { icon: UserRound, text: 'Professional Chauffeurs' }, { icon: ShieldCheck, text: 'Fixed Upfront Pricing' }, { icon: Diamond, text: 'Luxury Fleet' }];
 
 
+
+function ServiceCard({ service, onSelect, children }) {
+  const href = { airport: '/airport-transfers', corporate: '/corporate', weddings: '/weddings' }[service.id];
+  return href
+    ? <Link className="service-card group text-left" href={href}>{children}</Link>
+    : <button className="service-card group text-left" onClick={onSelect}>{children}</button>;
+}
 
 export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -45,9 +52,9 @@ export default function Home() {
         <nav aria-label="Main navigation" className={menuOpen ? 'navigation is-open' : 'navigation'}>
           <a className="active" href="#home" onClick={() => setMenuOpen(false)}>Home</a>
           <Link href="/fleet" onClick={() => setMenuOpen(false)}>Our Fleet</Link>
-          <button onClick={() => { setMenuOpen(false); setActiveService(services[0]); }}>Airport Transfers</button>
-          <button onClick={() => { setMenuOpen(false); setActiveService(services[1]); }}>Corporate</button>
-          <button onClick={() => { setMenuOpen(false); setActiveService(services[2]); }}>Weddings</button>
+          <Link href="/airport-transfers" onClick={() => setMenuOpen(false)}>Airport Transfers</Link>
+          <Link href="/corporate" onClick={() => setMenuOpen(false)}>Corporate</Link>
+          <Link href="/weddings" onClick={() => setMenuOpen(false)}>Weddings</Link>
           <Link href="/contact" onClick={() => setMenuOpen(false)}>Contact</Link>
         </nav>
         <a className="header-phone" href="tel:0416934865"><Phone size={23} fill="currentColor" /><span>0416 934 865</span></a>
@@ -76,7 +83,7 @@ export default function Home() {
 
       <section className="services section-shell" id="services" aria-labelledby="services-heading">
         <div className="section-title"><span /><h2 id="services-heading">A Better Way to Travel</h2><span /></div>
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">{services.map(service => <button key={service.id} className="service-card group text-left" onClick={() => setActiveService(service)}><div className="service-image"><img src={service.image} alt={service.alt} className="transition-transform duration-700 group-hover:scale-105" /></div><div className="service-content"><h3>{service.title}</h3><p>{service.description}</p><ArrowRight className="service-arrow transition-transform group-hover:translate-x-1" size={25} /></div></button>)}</div>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">{services.map(service => <ServiceCard key={service.id} service={service} onSelect={() => setActiveService(service)}><div className="service-image"><img src={service.image} alt={service.alt} className="transition-transform duration-700 group-hover:scale-105" /></div><div className="service-content"><h3>{service.title}</h3><p>{service.description}</p><ArrowRight className="service-arrow transition-transform group-hover:translate-x-1" size={25} /></div></ServiceCard>)}</div>
       </section>
 
       <section id="fleet" className="fleet-section section-shell">

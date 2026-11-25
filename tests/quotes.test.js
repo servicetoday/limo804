@@ -3,6 +3,35 @@ import assert from 'node:assert/strict';
 import { sydneyPickup, validateQuote, validateQuoteUpdate } from '../lib/quote-validation.js';
 const now = new Date('2030-01-01T00:00:00Z');
 function payload() { return { submissionKey: 'd9345316-d4f1-4e08-b5e6-e23a0e871899', trip: { service: 'transfer', journey: 'one-way', legs: [{ pickup: 'Sydney Airport', dropoff: 'Sydney CBD', date: '2030-01-02', time: '10:00', passengers: 3, stops: [] }] }, customer: { firstName: 'Alex', lastName: 'Lee', email: 'ALEX@example.com', countryCode: '+61', mobile: '0412 345 678', someoneElse: false } }; }
+
+test('airport quotes preserve manual timing, flight numbers and luggage for either direction', () => {
+  for (const departure of [false, true]) {
+    const raw = payload();
+    Object.assign(raw.trip.legs[0], {
+      pickup: departure ? 'Sydney CBD' : 'Sydney Airport — T1 International',
+      dropoff: departure ? 'Sydney Airport — T1 International' : 'Sydney CBD',
+      flightNumber: 'QF12', flightScheduled: false,
+    });
+    raw.trip.flightText = 'Suitcases: 3\nCarry-on bags: 2\nSpecial requirements: Child seat for age 3';
+    const result = validateQuote(raw, now);
+    assert.equal(result.legs[0].flightNumber, 'QF12');
+    assert.equal(result.legs[0].date, '2030-01-02');
+    assert.equal(result.legs[0].time, '10:00');
+    assert.equal(result.legs[0].pickup, raw.trip.legs[0].pickup);
+    assert.equal(result.legs[0].dropoff, raw.trip.legs[0].dropoff);
+    assert.equal(result.flightText, raw.trip.flightText);
+  }
+});
+
+test('airport quotes accept an unknown flight with a scheduled pickup and reject invalid flight numbers', () => {
+  const raw = payload();
+  Object.assign(raw.trip.legs[0], { flightUnknown: true, flightScheduled: false, flightNumber: '' });
+  assert.equal(validateQuote(raw, now).legs[0].flightUnknown, true);
+  raw.trip.legs[0].time = '';
+  assert.throws(() => validateQuote(raw, now), /Pick-up time/);
+  Object.assign(raw.trip.legs[0], { time: '10:00', flightUnknown: false, flightNumber: 'not-a-flight' });
+  assert.throws(() => validateQuote(raw, now), /Flight number|flight number/);
+});
 test('normalizes customers and Sydney pickup times server-side', () => {
   const result = validateQuote(payload(), now);
   assert.equal(result.customer.passenger.email, 'alex@example.com');
