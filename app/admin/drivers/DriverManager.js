@@ -1,6 +1,7 @@
 'use client';
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import styles from './drivers.module.css';
 
 const empty = { name: '', email: '', phone: '', address: '', assignedFleetId: '', registration: '' };
 export default function DriverManager({ initialDrivers, vehicles }) {
@@ -12,7 +13,11 @@ export default function DriverManager({ initialDrivers, vehicles }) {
   const update = (key, value) => setForm(current => ({ ...current, [key]: value }));
   function edit(driver) {
     setEditingId(driver.id); setForm({ name: driver.name, email: driver.email || '', phone: driver.phone, address: driver.address || '', assignedFleetId: driver.assigned_fleet_id || '', registration: driver.vehicle_registration || '' });
-    setError(''); setNotice(''); nameInput.current?.focus();
+    setError(''); setNotice('');
+    requestAnimationFrame(() => {
+      nameInput.current?.focus({ preventScroll: true });
+      nameInput.current?.scrollIntoView({ block: 'center' });
+    });
   }
   async function save(event) {
     event.preventDefault(); setBusy(true); setError(''); setNotice('');
@@ -27,11 +32,22 @@ export default function DriverManager({ initialDrivers, vehicles }) {
     } catch (error) { setError(error.message); } finally { setBusy(false); }
   }
   const chosen = vehicles.find(vehicle => vehicle.id === Number(form.assignedFleetId));
-  return <div className="admin-columns">
-    <section className="admin-inventory"><h2 className="quote-section-title">Driver list</h2>
-      {drivers.length === 0 ? <p>No drivers yet. Add your first driver using the form.</p> : <div className="quote-table-scroll"><table className="quote-admin-table driver-table"><thead><tr><th scope="col">Driver</th><th scope="col">Vehicle</th><th scope="col">Rego</th><th scope="col">Contact</th><th scope="col">Action</th></tr></thead><tbody>{drivers.map(driver => <tr key={driver.id}><td>{driver.name}</td><td>{driver.vehicle_name || 'Unassigned'}{driver.assigned_fleet_id && !driver.vehicle_available ? <small>Vehicle unavailable</small> : null}</td><td>{driver.vehicle_registration || 'Not provided'}</td><td>{driver.phone}{driver.email && <small>{driver.email}</small>}</td><td><button className="driver-edit-button" disabled={busy} onClick={() => edit(driver)} aria-label={`Edit ${driver.name}`}>Edit</button></td></tr>)}</tbody></table></div>}
+  return <div className={`admin-columns ${styles.columns}`}>
+    <section className="admin-inventory" aria-labelledby="driver-list-heading"><div className={styles.listHeading}><h2 id="driver-list-heading" className="quote-section-title">Driver list</h2><a className={styles.formLink} href="#driver-editor">{editingId ? 'Go to edit form' : 'Add driver'}</a></div>
+      {drivers.length === 0 ? <p>No drivers yet. Add your first driver using the form.</p> : <>
+        <div className={`quote-table-scroll ${styles.desktopList}`}><table className="quote-admin-table driver-table"><thead><tr><th scope="col">Driver</th><th scope="col">Vehicle</th><th scope="col">Rego</th><th scope="col">Contact</th><th scope="col">Action</th></tr></thead><tbody>{drivers.map(driver => <tr key={driver.id}><td>{driver.name}</td><td>{driver.vehicle_name || 'Unassigned'}{driver.assigned_fleet_id && !driver.vehicle_available ? <small>Vehicle unavailable</small> : null}</td><td>{driver.vehicle_registration || 'Not provided'}</td><td>{driver.phone}{driver.email && <small>{driver.email}</small>}</td><td><button className="driver-edit-button" disabled={busy} onClick={() => edit(driver)} aria-label={`Edit ${driver.name}`}>Edit</button></td></tr>)}</tbody></table></div>
+        <ul className={styles.cards} aria-label="Drivers">{drivers.map(driver => <li key={driver.id}>
+          <div className={styles.cardHeading}><h3>{driver.name}</h3><button className="driver-edit-button" type="button" disabled={busy} onClick={() => edit(driver)} aria-label={`Edit ${driver.name}`}>Edit</button></div>
+          <dl>
+            <div><dt>Vehicle</dt><dd>{driver.vehicle_name || 'Unassigned'}{driver.assigned_fleet_id && !driver.vehicle_available ? <small>Vehicle unavailable</small> : null}</dd></div>
+            <div><dt>Rego</dt><dd>{driver.vehicle_registration || 'Not provided'}</dd></div>
+            <div><dt>Phone</dt><dd><a href={`tel:${driver.phone}`}>{driver.phone}</a></dd></div>
+            {driver.email && <div><dt>Email</dt><dd><a href={`mailto:${driver.email}`}>{driver.email}</a></dd></div>}
+          </dl>
+        </li>)}</ul>
+      </>}
     </section>
-    <section className="admin-inventory"><h2 className="quote-section-title">{editingId ? 'Edit driver' : 'Add driver'}</h2>
+    <section id="driver-editor" className={`admin-inventory ${styles.editor}`} aria-labelledby="driver-editor-heading"><h2 id="driver-editor-heading" className="quote-section-title">{editingId ? 'Edit driver' : 'Add driver'}</h2>
       <form className="admin-form" onSubmit={save}>
         <label>Name<input ref={nameInput} value={form.name} onChange={event => update('name', event.target.value)} maxLength={150} required /></label>
         <label>Phone<input type="tel" value={form.phone} onChange={event => update('phone', event.target.value)} maxLength={30} required /></label>

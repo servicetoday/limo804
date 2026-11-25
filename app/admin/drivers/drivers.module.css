@@ -1,0 +1,38 @@
+.header nav{display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px;font-size:14px}
+.header nav a{display:inline-flex;align-items:center;min-height:44px}
+.header nav a:hover{color:var(--gold)}
+.columns>section{min-width:0}
+.listHeading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px}
+.listHeading h2{margin:0}
+.formLink{display:none}
+.cards{display:none}
+.editor{scroll-margin-top:20px}
+.page :global(.admin-form) small{overflow-wrap:anywhere}
+@media(max-width:1100px){
+  .columns{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:760px){
+  .page :global(.admin-main){padding:24px 16px 36px}
+  .header{flex-direction:column;align-items:flex-start;gap:10px;padding:12px 16px}
+  .header nav{width:100%;gap:4px 16px;font-size:13px}
+  .header nav a{min-height:44px}
+  .columns{gap:20px}
+  .columns>section{padding:20px 16px;border-radius:10px}
+  .formLink{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:8px 12px;border:1px solid #d6dfe9;border-radius:7px;font-size:13px;color:#795b26;text-align:center}
+  .desktopList{display:none}
+  .cards{display:grid;gap:14px;list-style:none;padding:0;margin:0}
+  .cards>li{min-width:0;padding:16px;border:1px solid #dfe5ec;border-radius:9px;background:#f9fafc}
+  .cardHeading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+  .cardHeading h3{min-width:0;margin:0;font:600 17px/1.5 var(--font-inter,Arial),sans-serif;color:#18304b;overflow-wrap:anywhere;padding-top:9px}
+  .cardHeading button{min-height:44px;min-width:54px;padding:10px 12px;border:1px solid #d6dfe9;border-radius:6px;background:#fff;flex-shrink:0}
+  .cards dl{margin:0}
+  .cards dl>div{display:grid;grid-template-columns:60px minmax(0,1fr);gap:12px;border-top:1px solid #e5eaf0;padding:10px 0;font-size:13px;line-height:1.6}
+  .cards dt{color:#73849a;font-size:12px}
+  .cards dd{margin:0;min-width:0;color:#314a66;overflow-wrap:anywhere}
+  .cards dd small{display:block;color:#8b6540;font-size:12px;margin-top:4px}
+  .cards dd a{display:inline-block;max-width:100%;color:#446f9d;text-decoration:underline;text-underline-offset:3px;padding:5px 0}
+  .page :global(.admin-form) input,.page :global(.admin-form) select,.page :global(.admin-form) textarea{max-width:100%;font-size:16px!important;min-height:48px}
+  .page :global(.driver-form-actions){flex-wrap:wrap;gap:12px}
+  .page :global(.driver-form-actions)>button{width:100%;min-height:48px;justify-content:center}
+  .page :global(.admin-error),.page :global(.admin-notice){overflow-wrap:anywhere}
+}
