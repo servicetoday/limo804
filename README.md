@@ -19,6 +19,8 @@ Transfer estimates use AUD $4/km plus $0.75 per driving minute, plus 10% GST, wi
 
 New quote and booking alerts are sent to `admin@limo804.com.au` when `MAILTRAP_AUTO_SEND=true`; customer acknowledgements and confirmations continue to use the customer?s email. Shared driver-booking notices also go to the admin address. Admin deliveries have separate logs and deduplication; synthetic fixtures never trigger automatic admin alerts.
 
+The `/contact` page has a name, email, optional phone and message form. `POST /api/contact` validates submissions and sends them through the configured Mailtrap sender to `admin@limo804.com.au`, with the visitor as Reply-To. Messages are sent only on submission. The form includes a honeypot, request-size limits and per-process retry deduplication/rate limits. Messages are not stored in the application database.
+
 ## Production
 
 ```sh

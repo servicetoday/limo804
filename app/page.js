@@ -48,7 +48,7 @@ export default function Home() {
           <button onClick={() => { setMenuOpen(false); setActiveService(services[0]); }}>Airport Transfers</button>
           <button onClick={() => { setMenuOpen(false); setActiveService(services[1]); }}>Corporate</button>
           <button onClick={() => { setMenuOpen(false); setActiveService(services[2]); }}>Weddings</button>
-          <a href="#contact" onClick={() => setMenuOpen(false)}>Contact</a>
+          <Link href="/contact" onClick={() => setMenuOpen(false)}>Contact</Link>
         </nav>
         <a className="header-phone" href="tel:0416934865"><Phone size={23} fill="currentColor" /><span>0416 934 865</span></a>
         <Link className="gold-button header-book" href="/quote">Book now</Link>
