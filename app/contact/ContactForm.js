@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import styles from './contact.module.css';
+import { createSubmissionKey } from '../../lib/submission-key';
 
 export default function ContactForm() {
   const [busy, setBusy] = useState(false);
@@ -18,10 +19,10 @@ export default function ContactForm() {
     if (!form.reportValidity()) return;
     inFlight.current = true;
     setBusy(true); setError('');
-    submissionKey.current ||= crypto.randomUUID();
     try {
+      submissionKey.current ||= createSubmissionKey();
       const details = Object.fromEntries(new FormData(form));
-      const response = await fetch('/api/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...details, submissionKey: submissionKey.current }) });
+      const response = await fetch('/api/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...details, submissionKey: submissionKey.current }), signal: AbortSignal.timeout(30000) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Please try again or contact our team directly.');
       setReceipt(result);
