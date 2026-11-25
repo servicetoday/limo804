@@ -1,0 +1,41 @@
+.header nav{display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px;font-size:14px}
+.header nav a{display:inline-flex;align-items:center;min-height:44px}
+.header nav a:hover{color:var(--gold)}
+.inventory{min-width:0}
+@media(max-width:1100px){
+  .page :global(.admin-title){flex-wrap:wrap;align-items:flex-start;gap:16px}
+  .page .inventory{padding:0;border:0;background:transparent}
+  .page .inventory :global(.quote-table-scroll){overflow:visible}
+  .page .table{display:block;min-width:0;width:100%;border:0}
+  .table thead{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+  .table tbody{display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
+  .table tbody tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 20px;min-width:0;padding:8px 22px;background:#fff;border:1px solid #dfe5ec;border-radius:12px}
+  .page .table td{display:block;grid-column:1 / -1;min-width:0;max-width:none;padding:16px 0;border:0;border-top:1px solid #e9edf2;overflow-wrap:anywhere;white-space:normal;font-size:14px}
+  .page .table td::before{content:attr(data-label);display:block;font:500 12px/1.5 var(--font-inter,Arial),sans-serif;color:#73849a;margin-bottom:8px}
+  .page .table .reference{border-top:0}
+  .table .reference>a{display:inline-block;max-width:100%;padding:5px 0;font-size:17px;font-weight:600}
+  .page .table .half{grid-column:span 1}
+  .page .table :global(.booking-route){min-width:0;max-width:none;line-height:1.8}
+  .page :global(.booking-driver-actions),.page :global(.booking-passenger-counts){min-width:0;max-width:none;width:100%;gap:12px}
+  .page :global(.booking-passenger-counts){grid-template-columns:repeat(2,minmax(0,1fr))}
+  .page :global(.booking-passenger-counts)>small{grid-column:1 / -1}
+  .page :global(.booking-driver-actions)>strong{overflow-wrap:anywhere}
+  .page :global(.booking-driver-actions) select,.page :global(.booking-passenger-counts) select{width:100%;min-width:0;max-width:100%;min-height:48px;padding:12px;font-size:16px}
+  .page :global(.booking-driver-actions) button{min-height:48px;width:100%;padding:12px 16px;justify-content:center;font-size:14px;border-radius:7px}
+  .page :global(.booking-driver-actions) :global(.driver-edit-button){border:1px solid #d6dfe9;background:#f8fafc;text-decoration:none}
+  .page :global(.booking-driver-actions) :global(.admin-error),.page :global(.booking-driver-actions) :global(.admin-notice){width:100%;overflow-wrap:anywhere}
+  .page .table small{font-size:12px;line-height:1.7;overflow-wrap:anywhere}
+  .page :global(.admin-empty){padding:30px 20px;background:#fff;border:1px solid #dfe5ec;border-radius:12px}
+  .page :global(.admin-empty) :global(.gold-button){min-height:48px;white-space:normal}
+}
+@media(max-width:760px){
+  .page :global(.admin-main){padding:24px 16px 36px}
+  .page .header{flex-direction:column;align-items:flex-start;gap:10px;padding:12px 16px}
+  .header nav{width:100%;gap:4px 16px;font-size:13px}
+  .page :global(.admin-title)>span{white-space:normal}
+  .table tbody tr{padding:6px 16px;gap:0 14px}
+}
+@media(max-width:360px){
+  .page .table .half{grid-column:1 / -1}
+  .page :global(.booking-passenger-counts){grid-template-columns:minmax(0,1fr)}
+}
