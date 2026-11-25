@@ -1,9 +1,10 @@
 import Link from 'next/link';
-import { CarFront, Luggage, Phone, Users } from 'lucide-react';
+import { CarFront, Luggage, Users } from 'lucide-react';
 import Logo from '../components/Logo';
 import ManageBookingLink from '../components/ManageBookingLink';
 import FleetCatalog from './FleetCatalog';
 import { listFleet } from '../../lib/fleet';
+import styles from '../components/ServicePage.module.css';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +18,14 @@ export default async function FleetPage() {
   try { vehicles = await listFleet(); } catch { unavailable = true; }
   return <>
     <a className="skip-link" href="#main">Skip to content</a>
-    <header className="site-header"><ManageBookingLink /><div className="header-inner fleet-header"><Logo /><nav className="fleet-header-nav" aria-label="Main navigation"><Link href="/">Home</Link><Link href="/fleet" aria-current="page">Our Fleet</Link><Link href="/contact">Contact</Link></nav><a className="header-phone" href="tel:0416934865"><Phone size={22} fill="currentColor" />0416 934 865</a><Link className="gold-button header-book" href="/quote">Book now</Link></div></header>
+    <header className="site-header">
+      <ManageBookingLink />
+      <div className={`header-inner ${styles.header}`}>
+        <Logo />
+        <nav aria-label="Main navigation"><Link href="/">Home</Link><Link href="/fleet" aria-current="page">Our Fleet</Link><Link href="/airport-transfers">Airport Transfers</Link><Link href="/corporate">Corporate</Link><Link href="/weddings">Weddings</Link><Link href="/contact">Contact</Link></nav>
+        <Link className="gold-button" href="/quote">Get a quote</Link>
+      </div>
+    </header>
     <main id="main" className="fleet-page">
       <section className="fleet-page-hero"><div className="fleet-page-hero-inner"><p className="fleet-breadcrumb"><Link href="/">Home</Link><span>/</span>Our Fleet</p><p className="eyebrow">The Limo804 collection</p><h1>A refined ride.<br />For every journey.</h1><p>Discover sedans and luxury SUVs for your next<br className="desktop-break" /> arrival in Sydney. Choose your style. We’ll take it from there.</p><a className="gold-button" href="#fleet-categories">Explore the fleet</a></div></section>
       <section className="fleet-catalog section-shell" id="fleet-categories" aria-label="Our fleet categories"><FleetCatalog vehicles={vehicles} unavailable={unavailable} /></section>
