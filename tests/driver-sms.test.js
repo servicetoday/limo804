@@ -178,14 +178,15 @@ test('SMS links to the details page and supports the default sender', async () =
   assert.equal(message.from, undefined);
 });
 
-test('test recipient override sends to the configured test number', async () => {
+test('assignment SMS uses the driver phone even if a legacy test override remains configured', async () => {
   process.env.CLICKSEND_TEST_TO = '0411573341';
   const result = await saveBookingAssignmentAndNotify(12, 1);
-  assert.equal(result.sms[0].recipient, '+61411573341');
-  assert.equal(JSON.parse(requests[0].data).messages[0].to, '+61411573341');
+  assert.equal(result.sms[0].recipient, '+61412345678');
+  assert.equal(JSON.parse(requests[0].data).messages[0].to, '+61412345678');
 });
 
 test('manual SMS resend sends only SMS with the current link and leaves assignment unchanged', async () => {
+  process.env.CLICKSEND_TEST_TO = '0411573341';
   booking.assigned_driver_id = 1; booking.driver_assignment_version = 5; manualSend = true;
   const original = { ...booking };
   globalThis.smsTestEmail = async () => { throw new Error('Manual SMS must not send email'); };
@@ -196,6 +197,14 @@ test('manual SMS resend sends only SMS with the current link and leaves assignme
   assert.match(JSON.parse(requests[0].data).messages[0].body, /driver\/booking\/12\.5\./);
   await resendDriverBookingSms(12, 5);
   assert.equal(requests.length, 2, 'An explicit manual resend should send another copy');
+});
+
+test('missing driver phone is reported instead of falling back to the former test recipient', async () => {
+  process.env.CLICKSEND_TEST_TO = '0411573341';
+  drivers.get(1).phone = '';
+  const result = await saveBookingAssignmentAndNotify(12, 1);
+  assert.match(result.smsError, /valid international number/);
+  assert.equal(requests.length, 0);
 });
 
 test('manual SMS rejects stale, closed, unassigned and missing driver bookings before sending', async () => {
