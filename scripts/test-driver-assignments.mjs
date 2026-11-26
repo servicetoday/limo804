@@ -52,7 +52,7 @@ try {
   const [withoutVehicle] = await db.execute('SELECT assigned_driver_id, assigned_fleet_id FROM bookings WHERE id = ?', [bookingId]);
   assert.equal(withoutVehicle[0].assigned_driver_id, driverId); assert.equal(withoutVehicle[0].assigned_fleet_id, null);
   await assignBookingDriver(bookingId, null, null);
-  const driverInput = { name: driver.name, phone: '0000000000', assignedFleetId: small.id };
+  const driverInput = { name: driver.name, phone: '0000000000', assignedFleetId: small.id, email: 'driver@example.com' };
   await saveDriver(driverInput, driverId);
   await assert.rejects(assignBookingDriver(bookingId, driverId, small.id), /passenger count/);
   await assert.rejects(assignBookingDriver(bookingId, driverId, large.id), /attached to the selected vehicle/);
@@ -71,7 +71,7 @@ try {
     assert.equal(url, 'https://send.api.mailtrap.io/api/send');
     calls++;
     const body = JSON.parse(options.body);
-    assert.deepEqual(body.to, [{ email: 'admin@limo804.com.au' }]);
+    assert.deepEqual(body.to, [{ email: 'driver@example.com' }]);
     assert.ok(body.text.includes(booking.reference)); assert.ok(body.text.includes('Stop 1: Mascot')); assert.ok(body.subject.startsWith('[TEST]'));
     assert.ok(body.text.includes('Booking amount: AUD 100.00')); assert.ok(body.html.includes('Booking amount: AUD 100.00'));
     startedSend();
@@ -93,7 +93,7 @@ try {
   const beforeUnassign = calls;
   globalThis.fetch = async (url, options) => {
     calls++; const body = JSON.parse(options.body);
-    assert.deepEqual(body.to, [{ email: 'admin@limo804.com.au' }]);
+    assert.deepEqual(body.to, [{ email: 'driver@example.com' }]);
     assert.ok(body.subject.includes('Unassigned')); assert.ok(body.text.includes(driver.name));
     assert.ok(body.text.includes(booking.reference)); assert.ok(body.text.includes('do not attend'));
     assert.ok(!body.text.includes('You have been assigned'));

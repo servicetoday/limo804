@@ -31,7 +31,7 @@ const connection = {
     if (sql.includes('FROM fleet')) return [[{ id: params[0], passengers: 4 }]];
     if (sql.includes('MAX(passengers)')) return [[{ required: 1 }]];
     if (sql.startsWith('UPDATE bookings')) {
-      [booking.assigned_driver_id, booking.assigned_fleet_id, booking.unassigned_driver_name] = params;
+      [booking.assigned_driver_id, booking.assigned_fleet_id, booking.unassigned_driver_name, booking.unassigned_driver_email] = params;
       booking.driver_assignment_version++;
       return [{}];
     }

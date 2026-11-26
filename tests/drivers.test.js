@@ -1,7 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateDriver, optionalId, driverEmailType } from '../lib/driver-validation.js';
+import { validateDriver, optionalId, driverEmailType, driverEmailRecipient } from '../lib/driver-validation.js';
 import { driverBookingEmailContent, driverUnassignedEmailContent } from '../lib/driver-booking-email-template.js';
+
+test('driver email recipients use the saved address and never fall back to admin', () => {
+  assert.equal(driverEmailRecipient(' Altaf@ServiceToday.com.au '), 'altaf@servicetoday.com.au');
+  for (const value of ['', undefined, null, 'invalid', 'person@example.com\nBcc:other@example.com']) assert.throws(() => driverEmailRecipient(value), /valid email address/);
+});
 
 test('driver validation preserves personal email and validates vehicle IDs', () => {
   const driver = validateDriver({ name: ' Driver ', phone: '0400 000 000', address: ' Sydney ', assignedFleetId: '3', email: ' Other@Example.com ' });

@@ -6,10 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "db:setup": "node scripts/setup-db.mjs && node scripts/setup-quotes.mjs && node scripts/setup-quote-emails.mjs && node scripts/setup-quote-offers.mjs && node scripts/setup-drivers.mjs && node scripts/setup-driver-assignments.mjs && node scripts/setup-driver-unassignments.mjs && node scripts/setup-driver-registration.mjs",
+    "db:setup": "node scripts/setup-db.mjs && node scripts/setup-quotes.mjs && node scripts/setup-quote-emails.mjs && node scripts/setup-quote-offers.mjs && node scripts/setup-drivers.mjs && node scripts/setup-driver-assignments.mjs && node scripts/setup-driver-unassignments.mjs && node scripts/setup-driver-registration.mjs && node scripts/setup-driver-email-recipients.mjs",
     "test": "node --test tests/*.test.js",
     "db:seed": "node scripts/seed-fleet.mjs",
-    "db:migrate": "node scripts/setup-quotes.mjs && node scripts/setup-quote-emails.mjs && node scripts/setup-quote-offers.mjs && node scripts/setup-drivers.mjs && node scripts/setup-driver-assignments.mjs && node scripts/setup-driver-unassignments.mjs && node scripts/setup-driver-registration.mjs"
+    "db:migrate": "node scripts/setup-quotes.mjs && node scripts/setup-quote-emails.mjs && node scripts/setup-quote-offers.mjs && node scripts/setup-drivers.mjs && node scripts/setup-driver-assignments.mjs && node scripts/setup-driver-unassignments.mjs && node scripts/setup-driver-registration.mjs && node scripts/setup-driver-email-recipients.mjs"
   },
   "repository": {
     "type": "git",

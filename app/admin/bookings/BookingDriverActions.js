@@ -2,7 +2,6 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { driverEmail } from '../../../lib/driver-validation';
 
 export default function BookingDriverActions({ booking, drivers, vehicles }) {
   const router = useRouter();
@@ -63,7 +62,7 @@ export default function BookingDriverActions({ booking, drivers, vehicles }) {
       <small>Saving sends email and SMS together. Email driver resends the email. SMS driver sends the current driver a fresh private booking link.</small>
       {changed && <small>Save the assignment before sending notifications.</small>}
     </>}
-    <small>Emails go to {driverEmail}</small>
+    <small>{booking.driver_email ? `Emails go to ${booking.driver_email}` : 'Add an email address to the driver profile to receive assignment emails.'}</small>
     {booking.driver_email_status && <small>{({ accepted: 'Email accepted by Mailtrap', failed: 'Email failed; you can retry', unknown: 'Previous delivery is uncertain. Email driver will send another copy.', sending: 'Email is sending', pending: 'Email pending' })[booking.driver_email_status]}</small>}
     {booking.driver_email_error && <small>{booking.driver_email_error}</small>}
     {error && <p className="admin-error" role="alert">{error}</p>}{notice && <p className="admin-notice" role="status">{notice}</p>}
