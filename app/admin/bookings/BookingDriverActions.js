@@ -14,13 +14,18 @@ export default function BookingDriverActions({ booking, drivers, vehicles }) {
   const closed = ['cancelled', 'completed'].includes(booking.status);
   const blocked = ['sending', 'unknown'].includes(booking.driver_email_status);
   useEffect(() => { setSelected(String(booking.assigned_driver_id || '')); setVehicle(String(booking.assigned_fleet_id || '')); }, [booking.assigned_driver_id, booking.assigned_fleet_id, booking.driver_assignment_version]);
-  async function act(email = false) {
+  async function act(action = 'assignment') {
+    const email = action === 'email', sms = action === 'sms';
     setBusy(true); setError(''); setNotice('');
     try {
-      const response = await fetch(`/api/admin/bookings/${booking.id}/${email ? 'driver-email' : 'driver'}`, { method: email ? 'POST' : 'PUT', headers: { 'Content-Type': 'application/json' }, ...(email ? {} : { body: JSON.stringify({ driverId: selected || null, fleetId: vehicle || null }) }) });
+      const response = await fetch(`/api/admin/bookings/${booking.id}/${email ? 'driver-email' : sms ? 'driver-sms' : 'driver'}`, { method: email || sms ? 'POST' : 'PUT', headers: { 'Content-Type': 'application/json' }, ...(email ? {} : { body: JSON.stringify(sms ? { assignmentVersion: booking.driver_assignment_version } : { driverId: selected || null, fleetId: vehicle || null }) }) });
       const data = await response.json();
       if (response.status === 401) { router.replace('/admin/login'); return; }
       if (!response.ok) throw new Error(data.error || 'Could not complete this action.');
+      if (sms) {
+        setNotice(`SMS accepted by ClickSend for ${data.recipient}. Delivery may be delayed while awaiting provider approval.`);
+        router.refresh(); return;
+      }
       const notification = email ? data : data.email;
       const smsAccepted = (data.sms || []).filter(result => result.status === 'accepted');
       const smsNotice = smsAccepted.map(result => `${result.notificationType === 'unassigned' ? 'Unassignment SMS' : 'Assignment SMS'} accepted by ClickSend for ${result.recipient}.`).join(' ');
@@ -51,9 +56,12 @@ export default function BookingDriverActions({ booking, drivers, vehicles }) {
       {!drivers.length && <Link href="/admin/drivers">Add a driver</Link>}
       {vehicle && !visibleDrivers.length && <small>No drivers attached to this vehicle. Select Any vehicle to choose from all drivers.</small>}
       <button className="driver-edit-button" disabled={busy || blocked} onClick={() => act()}>Save assignment</button>
-      <button className="gold-button" disabled={busy || changed || (!booking.assigned_driver_id && !booking.unassigned_driver_name) || booking.driver_email_status === 'sending'} onClick={() => act(true)}>{busy ? 'Working…' : 'Email driver'}</button>
-      <small>Saving sends an email and a private booking link by SMS to the assigned driver. Changing drivers also notifies the previous driver. Vehicle changes refresh the booking link. Email driver sends another email copy.</small>
-      {changed && <small>Save the assignment before emailing.</small>}
+      <div className="driver-notification-buttons">
+        <button className="gold-button" disabled={busy || changed || (!booking.assigned_driver_id && !booking.unassigned_driver_name) || booking.driver_email_status === 'sending'} onClick={() => act('email')}>Email driver</button>
+        <button className="gold-button" disabled={busy || changed || !booking.assigned_driver_id} onClick={() => act('sms')}>SMS driver</button>
+      </div>
+      <small>Saving sends email and SMS together. Email driver resends the email. SMS driver sends the current driver a fresh private booking link.</small>
+      {changed && <small>Save the assignment before sending notifications.</small>}
     </>}
     <small>Emails go to {driverEmail}</small>
     {booking.driver_email_status && <small>{({ accepted: 'Email accepted by Mailtrap', failed: 'Email failed; you can retry', unknown: 'Previous delivery is uncertain. Email driver will send another copy.', sending: 'Email is sending', pending: 'Email pending' })[booking.driver_email_status]}</small>}

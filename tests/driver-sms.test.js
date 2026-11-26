@@ -18,13 +18,14 @@ registerHooks({ resolve(specifier, context, nextResolve) {
   }
 } });
 
-let booking, drivers, committed, requests, history;
+let booking, drivers, committed, requests, history, manualSend;
 const connection = {
   async beginTransaction() { committed = false; },
   async commit() { committed = true; },
   async rollback() {}, release() {},
   async execute(sql, params) {
-    if (sql.startsWith('SELECT * FROM bookings')) return [[{ ...booking }]];
+    if (sql.startsWith('SELECT * FROM bookings')) return [booking ? [{ ...booking }] : []];
+    if (sql.startsWith('SELECT customer_reference FROM quotes')) return [[globalThis.smsTestQuote]];
     if (sql.includes('FROM quote_emails')) return [[]];
     if (sql.includes('FROM drivers')) return [[drivers.get(params[0])].filter(Boolean)];
     if (sql.includes('FROM fleet')) return [[{ id: params[0], passengers: 4 }]];
@@ -41,6 +42,7 @@ const connection = {
 globalThis.limoDb = { async getConnection() { return connection; } };
 const { saveBookingAssignmentAndNotify } = await import('../lib/booking-assignments.js');
 const { driverSmsPhone, sendDriverBookingSms } = await import('../lib/driver-booking-sms.js');
+const { resendDriverBookingSms } = await import('../lib/driver-booking-sms-resend.js');
 const oldAdapter = axios.defaults.adapter;
 const envNames = ['CLICKSEND_USERNAME', 'CLICKSEND_API_KEY', 'CLICKSEND_FROM', 'CLICKSEND_TEST_TO', 'PUBLIC_APP_URL', 'DRIVER_BOOKING_LINK_SECRET'];
 const oldEnv = Object.fromEntries(envNames.map(name => [name, process.env[name]]));
@@ -48,14 +50,15 @@ const oldEnv = Object.fromEntries(envNames.map(name => [name, process.env[name]]
 test.beforeEach(() => {
   booking = { id: 12, quote_id: 8, reference: 'B-TEST-12', status: 'pending', assigned_driver_id: null, assigned_fleet_id: null, driver_assignment_version: 0, unassigned_driver_name: null };
   drivers = new Map([[1, { name: 'First Driver', phone: '0412 345 678' }], [2, { name: 'Second Driver', phone: '+61487654321' }]]);
-  committed = false; requests = []; history = 0;
+  committed = false; requests = []; history = 0; manualSend = false;
   process.env.CLICKSEND_USERNAME = 'mock-user'; process.env.CLICKSEND_API_KEY = 'mock-key'; process.env.CLICKSEND_FROM = 'Limo804';
   delete process.env.CLICKSEND_TEST_TO;
   process.env.PUBLIC_APP_URL = 'https://example.com'; process.env.DRIVER_BOOKING_LINK_SECRET = 'test-driver-link-secret';
   globalThis.smsTestQuote = { journeys: [{ pickup_location: 'Sydney Airport', dropoff_location: 'CBD', pickup_local_date: '2030-01-02', pickup_local_time: '10:00:00', timezone: 'Australia/Sydney' }] };
   globalThis.smsTestEmail = async () => ({ status: 'accepted' });
   axios.defaults.adapter = async config => {
-    assert.ok(committed, 'SMS must only be sent after assignment commit');
+    assert.ok(committed || manualSend, 'Automatic SMS must only be sent after assignment commit');
+    if (manualSend) assert.equal(committed, false, 'Manual resend keeps the current assignment locked until the send finishes');
     requests.push(config);
     return { status: 200, data: { response_code: 'SUCCESS', data: { messages: [{ status: 'SUCCESS', message_id: `mock-${requests.length}` }] } }, headers: {}, config };
   };
@@ -180,4 +183,42 @@ test('test recipient override sends to the configured test number', async () => 
   const result = await saveBookingAssignmentAndNotify(12, 1);
   assert.equal(result.sms[0].recipient, '+61411573341');
   assert.equal(JSON.parse(requests[0].data).messages[0].to, '+61411573341');
+});
+
+test('manual SMS resend sends only SMS with the current link and leaves assignment unchanged', async () => {
+  booking.assigned_driver_id = 1; booking.driver_assignment_version = 5; manualSend = true;
+  const original = { ...booking };
+  globalThis.smsTestEmail = async () => { throw new Error('Manual SMS must not send email'); };
+  const result = await resendDriverBookingSms(12, 5);
+  assert.equal(result.status, 'accepted'); assert.equal(result.recipient, '+61412345678');
+  assert.equal(requests.length, 1); assert.equal(committed, true); assert.equal(history, 0);
+  assert.deepEqual(booking, original);
+  assert.match(JSON.parse(requests[0].data).messages[0].body, /driver\/booking\/12\.5\./);
+  await resendDriverBookingSms(12, 5);
+  assert.equal(requests.length, 2, 'An explicit manual resend should send another copy');
+});
+
+test('manual SMS rejects stale, closed, unassigned and missing driver bookings before sending', async () => {
+  manualSend = true;
+  for (const version of [undefined, -1, '0']) await assert.rejects(resendDriverBookingSms(12, version), /Invalid assignment version/);
+  await assert.rejects(resendDriverBookingSms(12, 1), /assignment changed/);
+  await assert.rejects(resendDriverBookingSms(12, 0), /Assign a driver/);
+  booking.assigned_driver_id = 1;
+  for (const status of ['cancelled', 'completed']) {
+    booking.status = status;
+    await assert.rejects(resendDriverBookingSms(12, 0), /no longer/);
+  }
+  booking.status = 'pending'; drivers.delete(1);
+  await assert.rejects(resendDriverBookingSms(12, 0), /driver is unavailable/);
+  booking = null;
+  await assert.rejects(resendDriverBookingSms(12, 0), /Booking not found/);
+  assert.equal(requests.length, 0);
+});
+
+test('manual SMS reports uncertain provider delivery and releases the assignment unchanged', async () => {
+  booking.assigned_driver_id = 1; manualSend = true;
+  const original = { ...booking };
+  axios.defaults.adapter = async () => { throw new Error('Network failure'); };
+  await assert.rejects(resendDriverBookingSms(12, 0), /delivery is uncertain/);
+  assert.deepEqual(booking, original); assert.equal(history, 0); assert.equal(committed, false);
 });
