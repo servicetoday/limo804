@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
+import { verifyDriverBookingToken } from '../lib/driver-booking-token.js';
 
 registerHooks({ resolve(specifier, context, nextResolve) {
   if (specifier === 'server-only') return { url: 'data:text/javascript,export {}', shortCircuit: true };
@@ -31,10 +32,11 @@ const connection = {
 globalThis.limoDb = { async getConnection() { return connection; }, async execute() { return [{}]; } };
 const { sendDriverBookingEmail } = await import('../lib/driver-booking-email.js');
 const realFetch = globalThis.fetch;
-const envKeys = ['MAILTRAP_API_TOKEN', 'MAILTRAP_FROM_EMAIL'];
+const envKeys = ['MAILTRAP_API_TOKEN', 'MAILTRAP_FROM_EMAIL', 'PUBLIC_APP_URL', 'DRIVER_BOOKING_LINK_SECRET'];
 const oldEnv = Object.fromEntries(envKeys.map(key => [key, process.env[key]]));
 test.beforeEach(() => {
   process.env.MAILTRAP_API_TOKEN = 'mock-token'; process.env.MAILTRAP_FROM_EMAIL = 'sender@example.invalid';
+  process.env.PUBLIC_APP_URL = 'https://limo804.com.au'; process.env.DRIVER_BOOKING_LINK_SECRET = 'email-booking-link-test-secret';
   booking = { id: 12, quote_id: 8, reference: 'B-20261126-1234', status: 'pending', assigned_driver_id: 1, assigned_fleet_id: null, driver_assignment_version: 2, total_amount: '100', currency: 'AUD' };
   driver = { id: 1, name: 'Test Driver', email: 'altaf@servicetoday.com.au' };
   emails = new Map(); requests = []; committed = false;
@@ -56,10 +58,15 @@ test('assignment email goes to driver profile even if the old admin log was acce
   const result = await sendDriverBookingEmail(12, { assignmentVersion: 2 });
   assert.equal(result.recipient, 'altaf@servicetoday.com.au'); assert.equal(result.repeated, false);
   assert.deepEqual(requests[0].to, [{ email: 'altaf@servicetoday.com.au' }]);
+  const link = requests[0].text.match(/View booking details: (https:\/\/\S+)/)?.[1];
+  assert.ok(link?.startsWith('https://limo804.com.au/driver/booking/12.2.'));
+  assert.equal(verifyDriverBookingToken(link.split('/').at(-1), booking, process.env.DRIVER_BOOKING_LINK_SECRET), true);
+  assert.ok(requests[0].html.includes(`href="${link}"`));
   assert.equal(emails.has('altaf@servicetoday.com.au'), true);
   emails.get('altaf@servicetoday.com.au').status = 'accepted';
   assert.equal((await sendDriverBookingEmail(12)).repeated, true); assert.equal(requests.length, 1);
   await sendDriverBookingEmail(12, { resend: true }); assert.equal(requests.length, 2);
+  assert.match(requests[1].text, /View booking details: https:\/\/limo804.com.au\/driver\/booking\//);
 });
 
 test('unassignment notice uses the removed driver email snapshot', async () => {
@@ -68,6 +75,8 @@ test('unassignment notice uses the removed driver email snapshot', async () => {
   const result = await sendDriverBookingEmail(12);
   assert.equal(result.notificationType, 'unassigned');
   assert.deepEqual(requests[0].to, [{ email: 'previous@example.com' }]);
+  assert.ok(!requests[0].text.includes('/driver/booking/'));
+  assert.ok(!requests[0].html.includes('View booking details'));
 });
 
 test('missing driver email reports an error instead of sending to admin', async () => {
