@@ -22,8 +22,11 @@ export default function BookingDriverActions({ booking, drivers, vehicles }) {
       if (response.status === 401) { router.replace('/admin/login'); return; }
       if (!response.ok) throw new Error(data.error || 'Could not complete this action.');
       const notification = email ? data : data.email;
-      setNotice(notification ? `${email ? '' : 'Assignment saved. '}${notification.notificationType === 'unassigned' ? 'Unassignment email' : 'Email'} accepted by Mailtrap for ${notification.recipient}.` : 'Assignment saved.');
-      if (data.emailError) setError(`Assignment saved, but the driver email was not confirmed: ${data.emailError}`);
+      const smsAccepted = (data.sms || []).filter(result => result.status === 'accepted');
+      const smsNotice = smsAccepted.map(result => `${result.notificationType === 'unassigned' ? 'Unassignment SMS' : 'Assignment SMS'} accepted by ClickSend for ${result.recipient}.`).join(' ');
+      setNotice([notification ? `${email ? '' : 'Assignment saved. '}${notification.notificationType === 'unassigned' ? 'Unassignment email' : 'Email'} accepted by Mailtrap for ${notification.recipient}.` : 'Assignment saved.', smsNotice].filter(Boolean).join(' '));
+      const failures = [data.emailError && `Driver email was not confirmed: ${data.emailError}`, data.smsError && `Driver SMS was not confirmed: ${data.smsError}`].filter(Boolean);
+      if (failures.length) setError(`Assignment saved. ${failures.join(' ')}`);
       router.refresh();
     } catch (error) { setError(error.message); router.refresh(); } finally { setBusy(false); }
   }
@@ -49,7 +52,7 @@ export default function BookingDriverActions({ booking, drivers, vehicles }) {
       {vehicle && !visibleDrivers.length && <small>No drivers attached to this vehicle. Select Any vehicle to choose from all drivers.</small>}
       <button className="driver-edit-button" disabled={busy || blocked} onClick={() => act()}>Save assignment</button>
       <button className="gold-button" disabled={busy || changed || (!booking.assigned_driver_id && !booking.unassigned_driver_name) || booking.driver_email_status === 'sending'} onClick={() => act(true)}>{busy ? 'Working…' : 'Email driver'}</button>
-      <small>Saving emails the assigned driver. Clearing an assignment notifies the previous driver. Email driver sends another copy.</small>
+      <small>Saving sends an email and a private booking link by SMS to the assigned driver. Changing drivers also notifies the previous driver. Vehicle changes refresh the booking link. Email driver sends another email copy.</small>
       {changed && <small>Save the assignment before emailing.</small>}
     </>}
     <small>Emails go to {driverEmail}</small>

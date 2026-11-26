@@ -1,7 +1,7 @@
 // Run: node --conditions=react-server scripts/test-driver-assignments.mjs
-// Uses isolated database fixtures; Mailtrap requests are mocked, never delivered.
+// Uses isolated database fixtures; Mailtrap and ClickSend requests are mocked, never delivered.
 import assert from 'node:assert/strict';
-import { registerHooks } from 'node:module';
+import { createRequire, registerHooks } from 'node:module';
 import { randomUUID } from 'node:crypto';
 import nextEnv from '@next/env';
 nextEnv.loadEnvConfig(process.cwd());
@@ -21,6 +21,9 @@ const { listBookings } = await import('../lib/bookings.js');
 const token = randomUUID(), email = `driver-test-${token}@example.invalid`;
 let driverId, quoteId, bookingId;
 const realFetch = globalThis.fetch;
+const axios = createRequire(import.meta.url)('axios');
+const realSmsAdapter = axios.defaults.adapter;
+axios.defaults.adapter = async config => ({ status: 200, data: { response_code: 'SUCCESS', data: { messages: [{ status: 'SUCCESS', message_id: 'mock-driver-sms' }] } }, headers: {}, config });
 const oldToken = process.env.MAILTRAP_API_TOKEN, oldSender = process.env.MAILTRAP_FROM_EMAIL;
 try {
   globalThis.fetch = async () => { throw new Error('Unexpected provider request before email tests'); };
@@ -140,6 +143,7 @@ try {
   console.log('PASS: optional quote/booking vehicles, quote vehicle selection and clearing, conversion vehicle carryover, drivers without vehicles, specific-vehicle matching and capacity, automatic notifications, unassignment, resend and failure handling. No real emails sent.');
 } finally {
   globalThis.fetch = realFetch;
+  axios.defaults.adapter = realSmsAdapter;
   if (oldToken === undefined) delete process.env.MAILTRAP_API_TOKEN; else process.env.MAILTRAP_API_TOKEN = oldToken;
   if (oldSender === undefined) delete process.env.MAILTRAP_FROM_EMAIL; else process.env.MAILTRAP_FROM_EMAIL = oldSender;
   // All fixtures are uniquely tagged; original application records are untouched.

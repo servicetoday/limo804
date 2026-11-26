@@ -24,6 +24,7 @@
   },
   "homepage": "https://github.com/servicetoday/limo804#readme",
   "dependencies": {
+    "clicksend": "^7.0.0",
     "lucide-react": "^1.77.0",
     "mysql2": "^3.24.6",
     "next": "^16.4.6",
