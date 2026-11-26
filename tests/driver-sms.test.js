@@ -83,7 +83,7 @@ test('assignment uses the SDK, exact SMS endpoint, Basic credentials and driver 
   assert.equal(request.timeout, 20000);
   assert.equal(message.to, '+61412345678'); assert.equal(message.from, 'Limo804');
   assert.match(message.body, /assigned booking B-TEST-12/);
-  assert.match(message.body, /View booking details: https:\/\/example.com\/driver\/booking\/12\.1\./);
+  assert.match(message.body, /View booking details: https:\/\/limo804.com.au\/driver\/booking\/12\.1\./);
   assert.match(message.body, /Pending confirmation/);
   assert.equal(message.custom_string, 'booking-12-v1-assigned');
   await saveBookingAssignmentAndNotify(12, 1);
@@ -174,7 +174,7 @@ test('SMS links to the details page and supports the default sender', async () =
   const quote = { customer_reference: 'DUMMY-SMS', journeys: [{ pickup_location: 'Airport', timing_source: 'flight', arriving_flight: 'QF1' }] };
   await sendDriverBookingSms(booking, drivers.get(1), 'assigned', quote);
   const message = JSON.parse(requests[0].data).messages[0];
-  assert.match(message.body, /TEST ONLY/); assert.match(message.body, /View booking details: https:\/\/example.com\/driver\/booking\//);
+  assert.match(message.body, /TEST ONLY/); assert.match(message.body, /View booking details: https:\/\/limo804.com.au\/driver\/booking\//);
   assert.equal(message.from, undefined);
 });
 

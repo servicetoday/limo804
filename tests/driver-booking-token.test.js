@@ -1,10 +1,26 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { driverBookingToken, driverBookingTokenId, verifyDriverBookingToken } from '../lib/driver-booking-token.js';
+import { driverBookingToken, driverBookingTokenId, verifyDriverBookingToken, driverBookingUrl } from '../lib/driver-booking-token.js';
 
 const booking = { id: 42, assigned_driver_id: 7, driver_assignment_version: 3, status: 'confirmed' };
 const now = new Date('2030-01-01T00:00:00Z').getTime();
 const expiry = Math.floor(now / 1000) + 3600;
+
+test('driver notification links always use the live domain even with a localhost environment URL', () => {
+  const oldOrigin = process.env.PUBLIC_APP_URL, oldSecret = process.env.DRIVER_BOOKING_LINK_SECRET;
+  try {
+    process.env.DRIVER_BOOKING_LINK_SECRET = 'test-secret';
+    for (const origin of ['http://localhost:3000', 'https://example.com', '']) {
+      process.env.PUBLIC_APP_URL = origin;
+      const url = new URL(driverBookingUrl(booking));
+      assert.equal(url.origin, 'https://limo804.com.au');
+      assert.equal(verifyDriverBookingToken(url.pathname.split('/').at(-1), booking, 'test-secret'), true);
+    }
+  } finally {
+    if (oldOrigin === undefined) delete process.env.PUBLIC_APP_URL; else process.env.PUBLIC_APP_URL = oldOrigin;
+    if (oldSecret === undefined) delete process.env.DRIVER_BOOKING_LINK_SECRET; else process.env.DRIVER_BOOKING_LINK_SECRET = oldSecret;
+  }
+});
 
 test('driver link is signed and binds booking, driver, assignment version and expiry', () => {
   const token = driverBookingToken(booking, 'test-secret', expiry);
